@@ -1,0 +1,27 @@
+# Playwright Test Artifacts
+test-screenshots/
+test-results/
+playwright-report/
+test-results.json
+
+# Node modules
+node_modules/
+
+# Playwright browsers
+.playwright/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Optional: Keep test-report.html in git for documentation
+# Remove this line if you want to commit screenshots
+!test-screenshots/test-report.html

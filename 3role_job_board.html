@@ -1,0 +1,2422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ready To Work: Enhanced Three-Role PoC with Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-contractor: #00BCD4; /* Aqua Blue */
+            --color-employer: #0097A7;  /* Teal Blue */
+            --color-agent: #E91E63;     /* Pink/Cyan */
+        }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .app-container {
+            width: 400px;
+            height: 90vh;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        .app-container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+        }
+        .header {
+            padding: 1.5rem 1rem;
+            text-align: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: white;
+            border-bottom: 3px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            background: linear-gradient(135deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.05) 100%);
+        }
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+            pointer-events: none;
+        }
+        .scrollable-content {
+            overflow-y: auto;
+            flex-grow: 1;
+            padding: 1.5rem;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        }
+        .scrollable-content::-webkit-scrollbar { width: 8px; }
+        .scrollable-content::-webkit-scrollbar-track { background: #f1f5f9; }
+        .scrollable-content::-webkit-scrollbar-thumb { 
+            background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%); 
+            border-radius: 10px; 
+        }
+        .scrollable-content::-webkit-scrollbar-thumb:hover { 
+            background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%); 
+        }
+        .nav-button {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 12px 12px 0 0;
+            margin: 2px;
+            position: relative;
+            overflow: hidden;
+        }
+        .nav-button:hover:not(.active) { 
+            background: linear-gradient(135deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.02) 100%);
+            transform: translateY(-2px);
+        }
+        .nav-button.active {
+            background: linear-gradient(135deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.02) 100%);
+        }
+        .nav-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--active-color);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+        .nav-button.active::before {
+            transform: scaleX(1);
+        }
+        input[type="number"], select, textarea {
+            appearance: none;
+            transition: all 0.3s ease;
+        }
+        input[type="number"]:focus, select:focus, textarea:focus {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .modern-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            transition: all 0.3s ease;
+        }
+        .modern-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+        }
+        
+        .modern-button {
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .modern-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .modern-button:hover::before {
+            opacity: 1;
+        }
+        .modern-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+        .modern-button:active {
+            transform: translateY(0);
+        }
+        
+        /* NEW STYLES FOR IMPROVEMENTS */
+        .activity-feed {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 1.5rem;
+            max-width: 800px;
+            width: 90%;
+            z-index: 1000;
+            display: none;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+        }
+        .activity-feed.show { display: block; animation: slideInDown 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .activity-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 0.75rem;
+            animation: slideIn 0.3s ease-out;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .activity-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .activity-item.contractor { 
+            background: linear-gradient(135deg, rgba(0, 188, 212, 0.1) 0%, rgba(0, 188, 212, 0.05) 100%); 
+            border-left: 4px solid var(--color-contractor);
+            border-radius: 12px;
+        }
+        .activity-item.employer { 
+            background: linear-gradient(135deg, rgba(0, 151, 167, 0.1) 0%, rgba(0, 151, 167, 0.05) 100%); 
+            border-left: 4px solid var(--color-employer);
+            border-radius: 12px;
+        }
+        .activity-item.agent { 
+            background: linear-gradient(135deg, rgba(233, 30, 99, 0.1) 0%, rgba(233, 30, 99, 0.05) 100%); 
+            border-left: 4px solid var(--color-agent);
+            border-radius: 12px;
+        }
+        .activity-item.system { 
+            background: linear-gradient(135deg, rgba(107, 114, 128, 0.1) 0%, rgba(107, 114, 128, 0.05) 100%); 
+            border-left: 4px solid #6B7280;
+            border-radius: 12px;
+        }
+        
+        .progress-tracker {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 16px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(10px);
+        }
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+            padding: 0 0.5rem;
+            margin-top: 1rem;
+        }
+        .progress-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            position: relative;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .progress-step:hover .step-tooltip {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        .step-tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%) translateY(10px);
+            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+            color: white;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            margin-bottom: 0.5rem;
+        }
+        .step-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: #111827;
+        }
+        .progress-step::after {
+            content: '';
+            position: absolute;
+            top: 25px;
+            left: 50%;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, #e5e7eb 0%, #e5e7eb 100%);
+            z-index: 0;
+            border-radius: 2px;
+            transition: all 0.5s ease;
+        }
+        .progress-step:last-child::after { display: none; }
+        .progress-step.completed::after { 
+            background: linear-gradient(90deg, #10B981 0%, #059669 100%);
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+        }
+        .progress-step.active::after { 
+            background: linear-gradient(90deg, var(--color-contractor) 0%, var(--color-employer) 100%);
+            box-shadow: 0 0 10px rgba(0, 188, 212, 0.4);
+            animation: progressPulse 2s ease-in-out infinite;
+        }
+        
+        .step-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            color: #6B7280;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.4rem;
+            z-index: 1;
+            position: relative;
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+        }
+        .progress-step.completed .step-icon {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            color: white;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+            transform: scale(1.05);
+            border-color: #059669;
+        }
+        .progress-step.active .step-icon {
+            background: linear-gradient(135deg, var(--color-contractor) 0%, var(--color-employer) 100%);
+            color: white;
+            animation: pulse 2s infinite;
+            box-shadow: 0 0 25px rgba(0, 188, 212, 0.6);
+            transform: scale(1.15);
+            border-color: var(--color-contractor);
+        }
+        .progress-step.failed .step-icon {
+            background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+            color: white;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+            border-color: #DC2626;
+        }
+        
+        .step-label {
+            font-size: 0.65rem;
+            text-align: center;
+            margin-top: 0.75rem;
+            color: #64748b;
+            font-weight: 600;
+            line-height: 1.2;
+            max-width: 90px;
+            transition: all 0.3s ease;
+        }
+        .progress-step.active .step-label { 
+            color: var(--color-contractor); 
+            font-weight: 700; 
+            transform: scale(1.05);
+            font-size: 0.7rem;
+        }
+        .progress-step.completed .step-label { 
+            color: #10B981; 
+            font-weight: 700; 
+        }
+        .progress-step.failed .step-label { 
+            color: #EF4444; 
+            font-weight: 700; 
+        }
+        
+        .progress-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+            border-radius: 10px;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+        .progress-percentage {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .progress-status-text {
+            font-size: 0.75rem;
+            color: #6366f1;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .progress-details-panel {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.95) 100%);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-top: 0.75rem;
+            border: 2px solid rgba(99, 102, 241, 0.2);
+            display: none;
+            animation: slideDown 0.3s ease-out;
+        }
+        .progress-details-panel.show {
+            display: block;
+        }
+        .progress-detail-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+            font-size: 0.8rem;
+        }
+        .progress-detail-item:last-child {
+            border-bottom: none;
+        }
+        .progress-detail-label {
+            color: #64748b;
+            font-weight: 600;
+        }
+        .progress-detail-value {
+            color: #1e293b;
+            font-weight: 700;
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        @keyframes progressPulse {
+            0%, 100% { 
+                opacity: 1;
+                transform: scaleY(1);
+            }
+            50% { 
+                opacity: 0.7;
+                transform: scaleY(1.2);
+            }
+        }
+        
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 12px;
+            padding: 1.25rem 1.75rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            z-index: 1001;
+            transform: translateX(120%);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border-left: 4px solid var(--color-contractor);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            max-width: 350px;
+            animation: slideInRight 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .toast.show { 
+            transform: translateX(0); 
+            animation: slideInRight 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .toast.employer { border-left-color: var(--color-employer); }
+        .toast.agent { border-left-color: var(--color-agent); }
+        .toast.system { border-left-color: #6B7280; }
+        
+        .deal-updated {
+            animation: pulse 0.5s ease-in-out;
+            border: 2px solid var(--color-contractor);
+        }
+        .sync-indicator {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            width: 8px;
+            height: 8px;
+            background: #10B981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        .workflow-controls {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .workflow-btn {
+            padding: 0.6rem 1.2rem;
+            border: 2px solid #e2e8f0;
+            background: white;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .workflow-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, var(--color-contractor) 0%, var(--color-employer) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .workflow-btn:hover { 
+            background: #f8fafc; 
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .workflow-btn.active { 
+            background: var(--color-contractor); 
+            color: white; 
+            border-color: var(--color-contractor);
+            box-shadow: 0 4px 12px rgba(0, 188, 212, 0.3);
+        }
+        .workflow-btn.active::before {
+            opacity: 0;
+        }
+
+        /* CHAT STYLES */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            max-height: 70vh;
+        }
+        .chat-header {
+            background: linear-gradient(135deg, var(--color-contractor), var(--color-employer));
+            color: white;
+            padding: 1rem;
+            border-radius: 12px 12px 0 0;
+            text-align: center;
+        }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+            border-left: 1px solid #e2e8f0;
+            border-right: 1px solid #e2e8f0;
+        }
+        .chat-input {
+            padding: 1.25rem;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 0 0 12px 12px;
+        }
+        .message {
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: flex-start;
+            animation: slideIn 0.4s ease-out;
+        }
+        .message.contractor {
+            flex-direction: row;
+        }
+        .message.employer {
+            flex-direction: row-reverse;
+        }
+        .message-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+        }
+        .message-avatar:hover {
+            transform: scale(1.1);
+        }
+        .message.contractor .message-avatar {
+            background: linear-gradient(135deg, var(--color-contractor) 0%, var(--color-contractor)dd 100%);
+            color: white;
+            margin-right: 0.75rem;
+        }
+        .message.employer .message-avatar {
+            background: linear-gradient(135deg, var(--color-employer) 0%, var(--color-employer)dd 100%);
+            color: white;
+            margin-left: 0.75rem;
+        }
+        .message-bubble {
+            max-width: 70%;
+            padding: 1rem 1.25rem;
+            border-radius: 1.25rem;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+        .message.contractor .message-bubble {
+            background: linear-gradient(135deg, var(--color-contractor) 0%, var(--color-contractor)dd 100%);
+            color: white;
+            border-bottom-left-radius: 0.5rem;
+        }
+        .message.employer .message-bubble {
+            background: linear-gradient(135deg, var(--color-employer) 0%, var(--color-employer)dd 100%);
+            color: white;
+            border-bottom-right-radius: 0.5rem;
+        }
+        .message-time {
+            font-size: 0.7rem;
+            opacity: 0.8;
+            margin-top: 0.5rem;
+            font-weight: 500;
+        }
+        .message.employer .message-time {
+            text-align: right;
+        }
+
+        /* DEAL TERMS STYLES */
+        .deal-terms-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .terms-summary {
+            background: #f0f9ff;
+            border: 2px solid var(--color-contractor);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .terms-summary h4 {
+            color: var(--color-contractor);
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        .confirm-section {
+            background: #ecfdf5;
+            border: 2px solid #10B981;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        /* AGENT CHAT VIEW */
+        .agent-chat-view {
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        .chat-sender {
+            font-weight: bold;
+            font-size: 0.8rem;
+            margin-bottom: 0.25rem;
+        }
+        .chat-sender.contractor { color: var(--color-contractor); }
+        .chat-sender.employer { color: var(--color-employer); }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideInDown {
+            from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(100%); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes bounceIn {
+            0% { opacity: 0; transform: scale(0.3); }
+            50% { opacity: 1; transform: scale(1.05); }
+            70% { transform: scale(0.9); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+        .shimmer {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 1000px 100%;
+            animation: shimmer 2s infinite;
+        }
+    </style>
+</head>
+<body class="p-6 flex justify-center flex-wrap gap-6">
+
+    <!-- Global Activity Feed -->
+    <div id="activity-feed" class="activity-feed">
+        <h3 class="font-bold text-lg mb-3 flex items-center">
+            🔄 Real-time Activity Feed
+            <button onclick="toggleActivityFeed()" class="ml-auto text-sm text-gray-500 hover:text-gray-700">✕</button>
+        </h3>
+        <div id="activity-items"></div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container"></div>
+
+    <!-- Global Workflow Progress Tracker -->
+    <div class="progress-tracker" style="position: fixed; top: 0; left: 0; right: 0; z-index: 999; margin: 0; border-radius: 0; border-bottom: 1px solid #e5e7eb;">
+        <div class="progress-info">
+            <div>
+                <h3 class="font-bold text-sm mb-1">📊 Deal Workflow Progress</h3>
+                <p class="progress-status-text" id="progress-status-text">Initializing...</p>
+            </div>
+            <div class="text-right">
+                <div class="progress-percentage" id="progress-percentage">0%</div>
+                <div class="flex gap-2 mt-1">
+                    <button onclick="toggleProgressDetails()" class="text-xs text-purple-600 hover:text-purple-800 font-semibold">Details</button>
+                    <button onclick="toggleActivityFeed()" class="text-xs text-blue-600 hover:text-blue-800 font-semibold">Activity</button>
+                </div>
+            </div>
+        </div>
+        <div class="progress-steps" id="progress-steps">
+            <!-- Steps will be dynamically rendered -->
+        </div>
+        
+        <!-- Progress Details Panel -->
+        <div id="progress-details-panel" class="progress-details-panel">
+            <div class="grid grid-cols-3 gap-4">
+                <div>
+                    <div class="progress-detail-item">
+                        <span class="progress-detail-label">Current Stage</span>
+                        <span class="progress-detail-value" id="detail-stage">-</span>
+                    </div>
+                    <div class="progress-detail-item">
+                        <span class="progress-detail-label">Completion</span>
+                        <span class="progress-detail-value" id="detail-completion">-</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="progress-detail-item">
+                        <span class="progress-detail-label">Total Activities</span>
+                        <span class="progress-detail-value" id="detail-activities">-</span>
+                    </div>
+                    <div class="progress-detail-item">
+                        <span class="progress-detail-label">Chat Messages</span>
+                        <span class="progress-detail-value" id="detail-messages">-</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="progress-detail-item">
+                        <span class="progress-detail-label">Deal Value</span>
+                        <span class="progress-detail-value" id="detail-value">-</span>
+                    </div>
+                    <div class="progress-detail-item">
+                        <span class="progress-detail-label">Status</span>
+                        <span class="progress-detail-value" id="detail-status">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add top padding to account for fixed progress tracker -->
+    <div style="height: 180px;" id="progress-spacer"></div>
+
+    <!-- Contractor Application Container (Left) -->
+    <div id="contractor-app" class="app-container">
+        <div class="header" style="background-color: var(--color-contractor);">
+            <div class="sync-indicator"></div>
+            Job Seeker (Contractor)
+        </div>
+        <div class="workflow-controls">
+            <button class="workflow-btn active" onclick="simulateWorkflowStep(1)">Step 1</button>
+            <button class="workflow-btn" onclick="simulateWorkflowStep(2)">Step 2</button>
+            <button class="workflow-btn" onclick="simulateWorkflowStep(3)">Step 3</button>
+            <button class="workflow-btn" onclick="simulateWorkflowStep(4)">Step 4</button>
+            <button class="workflow-btn" onclick="simulateWorkflowStep(5)">Step 5</button>
+        </div>
+        <div id="contractor-content" class="scrollable-content"></div>
+        <div id="contractor-nav" class="flex border-t border-gray-200 bg-white"></div>
+    </div>
+    
+    <!-- Employer Application Container (Middle) -->
+    <div id="employer-app" class="app-container">
+        <div class="header" style="background-color: var(--color-employer);">
+            <div class="sync-indicator"></div>
+            Employer (Acme Corp.)
+        </div>
+        <div class="workflow-controls">
+            <button class="workflow-btn" onclick="simulateWorkflowStep(1)">Step 1</button>
+            <button class="workflow-btn" onclick="simulateWorkflowStep(2)">Step 2</button>
+            <button class="workflow-btn" onclick="simulateWorkflowStep(3)">Step 3</button>
+            <button class="workflow-btn" onclick="simulateWorkflowStep(4)">Step 4</button>
+            <button class="workflow-btn" onclick="simulateWorkflowStep(5)">Step 5</button>
+        </div>
+        <div id="employer-content" class="scrollable-content"></div>
+        <div id="employer-nav" class="flex border-t border-gray-200 bg-white"></div>
+    </div>
+
+    <!-- Agent Application Container (Right) -->
+    <div id="agent-app" class="app-container">
+        <div class="header" style="background-color: var(--color-agent);">
+            <div class="sync-indicator"></div>
+            Deal Manager (Agent)
+        </div>
+        <div class="workflow-controls">
+            <button class="workflow-btn" onclick="simulateWorkflowStep(1)">Step 1</button>
+            <button class="workflow-btn" onclick="simulateWorkflowStep(2)">Step 2</button>
+            <button class="workflow-btn" onclick="simulateWorkflowStep(3)">Step 3</button>
+            <button class="workflow-btn" onclick="simulateWorkflowStep(4)">Step 4</button>
+            <button class="workflow-btn" onclick="simulateWorkflowStep(5)">Step 5</button>
+        </div>
+        <div id="agent-content" class="scrollable-content"></div>
+        <div id="agent-nav" class="flex border-t border-gray-200 bg-white"></div>
+    </div>
+
+<script>
+    // --- Configuration and Constants ---
+
+    const ROLES = ['Contractor', 'Employer', 'Agent'];
+    const WORKFLOW_STEPS = [
+        "Awaiting Initial Demand",
+        "Demand Submitted - Awaiting Employer Review", 
+        "Chat Negotiation",
+        "Ready for Agent Review",
+        "Deal Manager Processed - Ready for Escrow"
+    ];
+    
+    const WORKFLOW_STAGES = [
+        { 
+            id: 1, 
+            name: 'Demand', 
+            label: 'Contractor Demand',
+            icon: '📝',
+            description: 'Contractor submits initial rate and terms',
+            statuses: ['Awaiting Initial Demand', 'New Demand Available']
+        },
+        { 
+            id: 2, 
+            name: 'Review', 
+            label: 'Employer Review',
+            icon: '👁️',
+            description: 'Employer reviews contractor proposal',
+            statuses: ['Demand Submitted - Awaiting Employer Review']
+        },
+        { 
+            id: 3, 
+            name: 'Negotiation', 
+            label: 'Chat Negotiation',
+            icon: '💬',
+            description: 'Both parties discuss and finalize terms',
+            statuses: ['Chat Negotiation']
+        },
+        { 
+            id: 4, 
+            name: 'AgentReview', 
+            label: 'Agent Approval',
+            icon: '✅',
+            description: 'Deal manager reviews and approves',
+            statuses: ['Ready for Agent Review', 'Pending Agent Review']
+        },
+        { 
+            id: 5, 
+            name: 'Finalized', 
+            label: 'Deal Finalized',
+            icon: '🎉',
+            description: 'Ready for escrow and execution',
+            statuses: ['Deal Manager Processed - Ready for Escrow', 'Processed']
+        }
+    ];
+    
+    // Role-specific styles
+    const ROLE_CONFIG = {
+        Contractor: { id: 'contractor', color: 'var(--color-contractor)', hex: '#00BCD4', text: 'cyan-600' },
+        Employer: { id: 'employer', color: 'var(--color-employer)', hex: '#0097A7', text: 'teal-600' },
+        Agent: { id: 'agent', color: 'var(--color-agent)', hex: '#E91E63', text: 'pink-600' }
+    };
+
+    // --- Global Shared State (Enhanced with Chat & Deal Terms) ---
+    const globalSharedState = {
+        deal: {
+            rate: null, 
+            option: null,
+            workHours: '9 AM - 5 PM',
+            workDays: 'Monday - Friday',
+            salary: null,
+            range: '70-85',
+            status: 'Awaiting Initial Demand',
+
+            agentNotes: '',  // Agent's notes on the deal
+            riskLevel: 'low',  // low, medium, high
+            priority: 'normal',  // low, normal, high, urgent
+            estimatedValue: 0,  // Calculated deal value
+            complianceChecked: false,  // Compliance verification
+            backgroundCheckStatus: 'pending'  // pending, passed, failed
+        },
+
+        chatHistory: [
+            { sender: 'System', message: 'Enhanced platform with chat initialized. Ready for testing!', timestamp: '12:00 PM', type: 'system' }
+        ],
+        negotiationChat: [
+            { sender: 'System', message: 'Chat negotiation system ready. Employer can now negotiate terms with contractor.', timestamp: '12:00 PM', type: 'system' }
+        ],
+        activityFeed: [],
+        lastSaved: null,
+        dealHistory: [],  // Track all state changes
+        agentActions: []  // Track agent-specific actions
+    };
+
+    // State tracking which UI tab/view is active for each role
+    let activeScreens = {
+        Contractor: 'Dashboard',
+        Employer: 'ContractorView',
+        Agent: 'ReviewConsole'
+    };
+
+
+    let currentChatSender = 'Contractor'; // Track who is typing
+
+    // --- Local Storage Management ---
+    function saveToLocalStorage() {
+        try {
+            localStorage.setItem('enhancedDealStateWithChat', JSON.stringify(globalSharedState));
+            globalSharedState.lastSaved = new Date().toISOString();
+        } catch (e) {
+            console.warn('LocalStorage not available:', e);
+        }
+    }
+
+    function loadFromLocalStorage() {
+        try {
+            const saved = localStorage.getItem('enhancedDealStateWithChat');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                // Merge with default state to ensure all properties exist
+                Object.assign(globalSharedState, parsed);
+                addActivity('System', 'Previous session with chat restored from storage', 'system');
+            }
+        } catch (e) {
+            console.warn('Failed to load from localStorage:', e);
+        }
+    }
+
+    // --- Activity Feed Management ---
+    function addActivity(sender, message, type = 'system') {
+        const activity = {
+            sender,
+            message,
+            type,
+            timestamp: new Date().toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            }),
+            id: Date.now()
+        };
+        
+        globalSharedState.activityFeed.unshift(activity);
+
+        // Keep only last 20 activities
+        if (globalSharedState.activityFeed.length > 20) {
+            globalSharedState.activityFeed = globalSharedState.activityFeed.slice(0, 20);
+        }
+
+        renderActivityFeed();
+        saveToLocalStorage();
+        showToast(sender, message, type);
+        updateProgressTracker();
+    }
+
+    function renderActivityFeed() {
+        const container = document.getElementById('activity-items');
+        if (!container) return;
+
+        const activities = globalSharedState.activityFeed.slice(0, 5); // Show last 5
+        container.innerHTML = activities.map(activity => `
+            <div class="activity-item ${activity.type}">
+                <div class="flex-1">
+                    <div class="flex items-center justify-between">
+                        <span class="font-semibold text-sm">${activity.sender}</span>
+                        <span class="text-xs text-gray-500">${activity.timestamp}</span>
+                    </div>
+                    <p class="text-sm text-gray-700">${activity.message}</p>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function toggleActivityFeed() {
+        const feed = document.getElementById('activity-feed');
+        feed.classList.toggle('show');
+    }
+
+    // --- Toast Notifications ---
+    function showToast(sender, message, type = 'system') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.innerHTML = `
+            <div class="font-semibold text-sm">${sender}</div>
+            <div class="text-sm text-gray-600">${message}</div>
+        `;
+        
+        container.appendChild(toast);
+        
+        // Show toast
+        setTimeout(() => toast.classList.add('show'), 100);
+        
+        // Hide and remove toast
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => container.removeChild(toast), 300);
+        }, 4000);
+    }
+
+    // --- Progress Tracker ---
+    function updateProgressTracker() {
+        const deal = globalSharedState.deal;
+        const stepsContainer = document.getElementById('progress-steps');
+        const percentageEl = document.getElementById('progress-percentage');
+        const statusTextEl = document.getElementById('progress-status-text');
+        
+        if (!stepsContainer) return;
+
+        // Determine current stage
+        let currentStageIndex = 0;
+        let isFailed = false;
+        
+        // Check for failed/rejected states
+        if (deal.status.includes('Canceled') || deal.status.includes('Rejected') || 
+            deal.status.includes('Deleted') || deal.status.includes('Denied')) {
+            isFailed = true;
+        }
+        
+        // Find which stage we're in
+        WORKFLOW_STAGES.forEach((stage, index) => {
+            if (stage.statuses.some(status => deal.status.includes(status))) {
+                currentStageIndex = index;
+            }
+        });
+        
+        // Calculate progress percentage
+        const progressPercentage = isFailed ? 0 : Math.round(((currentStageIndex + 1) / WORKFLOW_STAGES.length) * 100);
+        
+        // Update percentage display
+        if (percentageEl) {
+            percentageEl.textContent = `${progressPercentage}%`;
+            percentageEl.style.background = isFailed 
+                ? 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)'
+                : `linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)`;
+            percentageEl.style.webkitBackgroundClip = 'text';
+            percentageEl.style.webkitTextFillColor = 'transparent';
+        }
+        
+        // Update status text
+        if (statusTextEl) {
+            if (isFailed) {
+                statusTextEl.textContent = 'Deal Failed - Restart Required';
+                statusTextEl.style.color = '#EF4444';
+            } else {
+                statusTextEl.textContent = WORKFLOW_STAGES[currentStageIndex].description;
+                statusTextEl.style.color = '#6366f1';
+            }
+        }
+        
+        // Update progress details
+        updateProgressDetails(currentStageIndex, progressPercentage, isFailed);
+        
+        // Render all steps
+        stepsContainer.innerHTML = WORKFLOW_STAGES.map((stage, index) => {
+            let stepClass = 'progress-step';
+            
+            if (isFailed && index === currentStageIndex) {
+                stepClass += ' failed';
+            } else if (index < currentStageIndex) {
+                stepClass += ' completed';
+            } else if (index === currentStageIndex) {
+                stepClass += ' active';
+            }
+            
+            return `
+                <div class="${stepClass}" data-step="${stage.id}">
+                    <div class="step-tooltip">${stage.description}</div>
+                    <div class="step-icon">${stage.icon}</div>
+                    <div class="step-label">${stage.label}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function updateProgressDetails(stageIndex, percentage, isFailed) {
+        const deal = globalSharedState.deal;
+        const detailStage = document.getElementById('detail-stage');
+        const detailCompletion = document.getElementById('detail-completion');
+        const detailActivities = document.getElementById('detail-activities');
+        const detailMessages = document.getElementById('detail-messages');
+        const detailValue = document.getElementById('detail-value');
+        const detailStatus = document.getElementById('detail-status');
+        
+        if (detailStage) detailStage.textContent = isFailed ? 'Failed' : WORKFLOW_STAGES[stageIndex]?.name || '-';
+        if (detailCompletion) detailCompletion.textContent = `${percentage}%`;
+        if (detailActivities) detailActivities.textContent = globalSharedState.activityFeed.length;
+        if (detailMessages) detailMessages.textContent = globalSharedState.negotiationChat.length;
+        
+        const dealValue = deal.rate ? `$${(deal.rate * 40 * 4).toFixed(0)}` : 'N/A';
+        if (detailValue) detailValue.textContent = dealValue;
+        
+        if (detailStatus) {
+            const statusText = isFailed ? 'Failed' : 
+                              stageIndex === WORKFLOW_STAGES.length - 1 ? 'Complete' : 'In Progress';
+            detailStatus.textContent = statusText;
+            detailStatus.style.color = isFailed ? '#EF4444' : 
+                                       stageIndex === WORKFLOW_STAGES.length - 1 ? '#10B981' : '#6366f1';
+        }
+    }
+
+    function toggleProgressDetails() {
+        const panel = document.getElementById('progress-details-panel');
+        const spacer = document.getElementById('progress-spacer');
+        
+        if (panel) {
+            panel.classList.toggle('show');
+            // Adjust spacer height
+            if (panel.classList.contains('show')) {
+                spacer.style.height = '240px';
+            } else {
+                spacer.style.height = '180px';
+            }
+        }
+    }
+
+    function simulateWorkflowStep(step) {
+        const statuses = [
+            'Awaiting Initial Demand',
+            'Demand Submitted - Awaiting Employer Review',
+            'Chat Negotiation',
+            'Ready for Agent Review',
+            'Deal Manager Processed - Ready for Escrow'
+        ];
+        
+        if (step >= 1 && step <= statuses.length) {
+            globalSharedState.deal.status = statuses[step - 1];
+            addActivity('Demo', `Simulated workflow step ${step}: ${statuses[step - 1]}`, 'system');
+            renderAllViews();
+        }
+    }
+
+    // --- Role Switching ---
+
+
+    // --- Chat Functions (FIXED) ---
+    function sendMessage(role, message) {
+        if (!message.trim()) return;
+
+        const chatMessage = {
+            sender: role,
+            message: message.trim(),
+            timestamp: new Date().toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            }),
+            type: role.toLowerCase()
+        };
+
+        globalSharedState.negotiationChat.push(chatMessage);
+        
+        // Auto-scroll to bottom
+        setTimeout(() => {
+            const chatContainer = document.querySelector('.chat-messages');
+            if (chatContainer) {
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+        }, 100);
+
+        addActivity(role, `Sent message: "${message.trim()}"`, role.toLowerCase());
+        renderAllViews();
+    }
+
+    function renderChat(role) {
+        const messages = globalSharedState.negotiationChat;
+        const isContractor = role === 'Contractor';
+        const uniqueId = `chat-input-${role.toLowerCase()}`;
+        
+        return `
+            <div class="chat-container">
+                <div class="chat-header">
+                    <h3 class="font-bold text-lg">💬 Deal Negotiation Chat</h3>
+                    <p class="text-sm opacity-90">Discuss terms and finalize agreement</p>
+                </div>
+                <div class="chat-messages" id="chat-messages-${role.toLowerCase()}">
+                    ${messages.map(msg => `
+                        <div class="message ${msg.type}">
+                            <div class="message-avatar">${msg.type === 'contractor' ? '👤' : '🏢'}</div>
+                            <div class="message-bubble">
+                                <div class="font-semibold text-sm mb-1">${msg.sender}</div>
+                                <div>${msg.message}</div>
+                                <div class="message-time">${msg.timestamp}</div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="chat-input">
+                    <div class="flex space-x-2">
+                        <input 
+                            type="text" 
+                            id="${uniqueId}" 
+                            placeholder="Type your message..." 
+                            class="flex-1 p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-white"
+                            onkeypress="if(event.key==='Enter') sendChatMessage('${role}')"
+                        >
+                        <button 
+                            onclick="sendChatMessage('${role}')"
+                            class="px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all transform hover:scale-105 font-semibold shadow-lg"
+                        >
+                            Send
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function sendChatMessage(role) {
+        const uniqueId = `chat-input-${role.toLowerCase()}`;
+        const input = document.getElementById(uniqueId);
+        const message = input.value;
+        if (message.trim()) {
+            sendMessage(role, message);
+            input.value = '';
+        }
+    }
+
+    // --- Navigation and Rendering ---
+
+    const NAV_CONFIG = {
+        Contractor: [
+            { key: 'Dashboard', icon: '🏠', label: 'Home' },
+            { key: 'Chat', icon: '💬', label: 'Chat' },
+            { key: 'Status', icon: '💰', label: 'Status' }
+        ],
+        Employer: [
+            { key: 'Search', icon: '🔍', label: 'Search' },
+            { key: 'ContractorView', icon: '💼', label: 'View' },
+            { key: 'Chat', icon: '💬', label: 'Chat' }
+        ],
+        Agent: [
+            { key: 'ReviewConsole', icon: '👀', label: 'Review' },
+            { key: 'Dashboard', icon: '📊', label: 'Dashboard' },
+            { key: 'Analytics', icon: '📈', label: 'Analytics' },
+            { key: 'Timeline', icon: '⏱️', label: 'Timeline' }
+        ]
+    };
+
+    /** Changes the screen state for a specific role and triggers a full re-render */
+    function navigate(screenKey, role) {
+        activeScreens[role] = screenKey;
+        renderRole(role);
+        addVisualFeedback(role);
+    }
+    
+    function addVisualFeedback(role) {
+        const app = document.getElementById(`${role.toLowerCase()}-app`);
+        app.classList.add('deal-updated');
+        setTimeout(() => app.classList.remove('deal-updated'), 1000);
+    }
+    
+    /** Renders the navigation bar for a given role */
+    function renderNav(role) {
+        const navContainer = document.getElementById(`${role.toLowerCase()}-nav`);
+        const config = NAV_CONFIG[role];
+        const { hex } = ROLE_CONFIG[role];
+
+        navContainer.innerHTML = config.map(item => `
+            <button onclick="navigate('${item.key}', '${role}')" 
+                    class="nav-button flex-1 py-4 flex flex-col items-center text-xs font-medium ${activeScreens[role] === item.key ? 'active' : 'text-gray-500'} hover:text-gray-700"
+                    style="${activeScreens[role] === item.key ? `--active-color: ${hex}; color: ${hex};` : ''}">
+                <span class="text-2xl mb-1 transform transition-transform hover:scale-110">${item.icon}</span>
+                <span class="font-semibold">${item.label}</span>
+            </button>
+        `).join('');
+    }
+
+    /** Renders the content area for a given role */
+    function renderRole(role) {
+        const contentContainer = document.getElementById(`${role.toLowerCase()}-content`);
+        const screenKey = activeScreens[role];
+        
+        let contentHTML = '';
+        
+        switch(role) {
+            case 'Contractor': contentHTML = renderContractorScreen(screenKey); break;
+            case 'Employer': contentHTML = renderEmployerScreen(screenKey); break;
+            case 'Agent': contentHTML = renderAgentScreen(screenKey); break;
+        }
+
+        contentContainer.innerHTML = contentHTML;
+        renderNav(role);
+    }
+    
+    /** Rerenders all roles */
+    function renderAllViews() {
+        ROLES.forEach(renderRole);
+        updateProgressTracker();
+        saveToLocalStorage();
+    }
+
+    // --- Contractor Screens ---
+    
+    /** Renders the form for Contractor to submit their initial demand or new demand */
+    function renderContractorSubmissionForm(currentStatus) {
+        const { hex } = ROLE_CONFIG.Contractor;
+        const isNewDemand = currentStatus.includes('New Demand');
+        
+        return `
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">${isNewDemand ? 'Submit New Demand' : 'Submit Initial Demand'}</h2>
+            <p class="text-sm text-gray-600 mb-6">
+                ${isNewDemand 
+                    ? 'The previous deal was terminated. Submit your revised demand to restart the process.'
+                    : 'Welcome! Start the deal by submitting your proposed hourly rate and preferred service option.'}
+            </p>
+            
+            <div class="space-y-4">
+                <label class="block">
+                    <span class="text-gray-700 font-semibold">Proposed Hourly Rate ($)</span>
+                    <input id="demand-rate" type="number" min="10" step="1" placeholder="e.g., 75" value="${globalSharedState.deal.rate || ''}"
+                           class="mt-1 block w-full rounded-xl border-gray-200 shadow-sm p-4 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all">
+                </label>
+                
+                <label class="block">
+                    <span class="text-gray-700 font-semibold">Preferred Service Option</span>
+                    <select id="demand-option"
+                            class="mt-1 block w-full rounded-xl border-gray-200 shadow-sm p-4 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all appearance-none bg-white">
+                        <option value="">-- Select Option --</option>
+                        <option value="Option 1 (Self-Service)">Option 1 (Self-Service)</option>
+                        <option value="Option 2 (Assisted Hire)">Option 2 (Assisted Hire)</option>
+                        <option value="Option 3 (Managed PEO)">Option 3 (Managed PEO)</option>
+                    </select>
+                </label>
+                
+                <div class="deal-terms-grid">
+                    <label class="block">
+                        <span class="text-gray-700 font-semibold">Work Hours</span>
+                        <input id="work-hours" type="text" placeholder="e.g., 9 AM - 5 PM" value="${globalSharedState.deal.workHours || ''}"
+                               class="mt-1 block w-full rounded-xl border-gray-200 shadow-sm p-4 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all">
+                    </label>
+                    
+                    <label class="block">
+                        <span class="text-gray-700 font-semibold">Work Days</span>
+                        <input id="work-days" type="text" placeholder="e.g., Monday - Friday" value="${globalSharedState.deal.workDays || ''}"
+                               class="mt-1 block w-full rounded-xl border-gray-200 shadow-sm p-4 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all">
+                    </label>
+                </div>
+            </div>
+            
+            <button onclick="submitInitialDemand()" 
+                    class="w-full mt-8 modern-button text-white"
+                    style="background: linear-gradient(135deg, ${hex} 0%, ${hex}dd 100%);">
+                Submit Demand to Employer
+            </button>
+        `;
+    }
+
+    function renderContractorScreen(screenKey) {
+        const deal = globalSharedState.deal;
+        const isSubmissionPhase = deal.status.includes('Demand') || deal.status.includes('New Demand') || deal.status.includes('Awaiting Initial Demand');
+        const isChatPhase = deal.status === 'Chat Negotiation';
+        const { hex } = ROLE_CONFIG.Contractor;
+
+        if (screenKey === 'Dashboard') {
+            if (isSubmissionPhase) {
+                return renderContractorSubmissionForm(deal.status);
+            }
+
+            if (isChatPhase) {
+                return `
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Chat with Employer 💬</h2>
+                    <div class="p-4 rounded-xl shadow-lg bg-blue-50 text-center border-2 border-blue-300 mb-6">
+                        <p class="text-xl font-semibold text-blue-800">Negotiation in Progress</p>
+                        <p class="text-sm text-gray-600 mt-2">Discuss your terms with the employer through the chat interface.</p>
+                    </div>
+                    <div class="grid grid-cols-1 gap-4">
+                        <button onclick="navigate('Chat', 'Contractor')" class="p-4 bg-blue-100 hover:bg-blue-200 rounded-xl shadow-md flex flex-col items-center transition-all">
+                            <span class="text-3xl">💬</span>
+                            <span class="text-sm font-semibold text-blue-700 mt-2">Open Chat</span>
+                        </button>
+                    </div>
+                `;
+            }
+
+            // Standard Dashboard view for ongoing deals
+            return `
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Welcome, Alex R. 👋</h2>
+                <div class="modern-card text-white" style="background: linear-gradient(135deg, ${hex} 0%, ${hex}dd 100%); position: relative; overflow: hidden;">
+                    <div style="position: absolute; top: -50%; right: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); animation: pulse 4s ease-in-out infinite;"></div>
+                    <p class="text-sm opacity-90 relative z-10">Your Proposed/Agreed Hourly Rate</p>
+                    <p class="text-5xl font-extrabold mt-2 relative z-10">$${deal.rate}.00</p>
+                    <p class="text-xs opacity-75 mt-2 relative z-10">Per Hour</p>
+                </div>
+                <h3 class="text-xl font-bold text-gray-700 mt-8 mb-4">Quick Actions</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    ${NAV_CONFIG.Contractor.filter(item => item.key !== 'Dashboard').map(item => `
+                        <button onclick="navigate('${item.key}', 'Contractor')" class="modern-card bg-gray-50 hover:bg-gray-100 flex flex-col items-center transition-all transform hover:scale-105">
+                            <span class="text-3xl mb-2">${item.icon}</span>
+                            <span class="text-sm font-semibold text-gray-700">${item.label}</span>
+                        </button>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        if (screenKey === 'Chat') {
+            return renderChat('Contractor');
+        }
+
+        if (screenKey === 'Status') {
+            
+            let statusColor = 'bg-gray-400';
+            let statusText = 'Negotiation in progress.';
+            let buttonHTML = '';
+            
+            const isAwaitingEmployer = deal.status === 'Demand Submitted - Awaiting Employer Review';
+            const isPending = deal.status.includes('Pending Agent Review');
+            const isCanceled = deal.status.includes('Canceled');
+            const isProcessed = deal.status.includes('Processed');
+            const isTerminated = isCanceled || deal.status.includes('Deleted') || deal.status.includes('Rejected');
+            const isNewDemandRequired = isTerminated;
+            
+            if (isTerminated) {
+                statusColor = 'bg-red-500';
+                statusText = deal.status.includes('Deleted') ? 'Deal Permanently Deleted by Manager. Start a new demand.' : 'Deal Canceled/Rejected. Negotiation ended.';
+                if (isNewDemandRequired) {
+                    buttonHTML = `<button onclick="navigate('Dashboard', 'Contractor')" class="w-full mt-4 p-3 rounded-xl shadow-lg font-bold text-white transition-all hover:bg-red-700" style="background-color: #C0392B;">
+                        Submit New Demand
+                    </button>`;
+                }
+            } else if (isProcessed) {
+                statusColor = 'bg-green-600';
+                statusText = 'Deal Approved! Final Escrow & E-Sign required.';
+            } else if (isAwaitingEmployer) {
+                statusColor = 'bg-blue-500';
+                statusText = 'Demand submitted. Awaiting Employer acceptance and chat invitation.';
+            } else if (isChatPhase) {
+                statusColor = 'bg-purple-600';
+                statusText = 'Chat negotiation in progress. Discuss terms with employer.';
+            } else if (isPending) {
+                statusColor = 'bg-yellow-500';
+                statusText = 'Awaiting Agent final approval.';
+                
+                buttonHTML = `
+                    <div class="text-center mt-4">
+                        <div class="p-4 bg-blue-100 rounded-xl border-2 border-blue-500 mb-3">
+                            <p class="text-blue-800 font-bold text-lg">⏳ Awaiting Final Approval</p>
+                            <p class="text-blue-700 text-sm mt-1">Agent is reviewing the deal terms</p>
+                        </div>
+                    </div>
+                `;
+            } else if (deal.status.includes('Awaiting Initial Demand')) {
+                statusColor = 'bg-gray-500';
+                statusText = 'No active demand submitted yet. Please go to Home.';
+            }
+
+            return `
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Contract Status</h2>
+                <div class="p-6 rounded-xl shadow-xl text-white ${statusColor} text-center">
+                    <p class="text-xs opacity-80 mb-2">Current Status</p>
+                    <p class="text-xl font-extrabold">${deal.status.split(' - ')[0]}</p>
+                    <p class="text-sm mt-1">${statusText}</p>
+                    ${buttonHTML}
+                </div>
+
+                <h3 class="text-xl font-bold text-gray-700 mt-8 mb-3">Agreement Details</h3>
+                ${deal.rate ? `
+                    <div class="space-y-3 p-4 bg-gray-50 rounded-lg">
+                        <div class="flex justify-between border-b pb-1">
+                            <span class="text-gray-600">Hourly Rate</span>
+                            <span class="font-semibold text-gray-900">$${deal.rate}.00</span>
+                        </div>
+                        <div class="flex justify-between border-b pb-1">
+                            <span class="text-gray-600">Work Hours</span>
+                            <span class="font-semibold text-gray-900">${deal.workHours}</span>
+                        </div>
+                        <div class="flex justify-between border-b pb-1">
+                            <span class="text-gray-600">Work Days</span>
+                            <span class="font-semibold text-gray-900">${deal.workDays}</span>
+                        </div>
+                        <div class="flex justify-between border-b pb-1">
+                            <span class="text-gray-600">Employer</span>
+                            <span class="font-semibold text-gray-900">Acme Corp.</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Service Model</span>
+                            <span class="font-semibold text-gray-900">${deal.option}</span>
+                        </div>
+                    </div>` : `
+                    <div class="p-4 bg-gray-100 rounded-lg text-gray-500 text-center">No deal details available yet.</div>
+                `}
+                
+                <div id="cancel-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full">
+                        <h4 class="text-xl font-bold mb-4 text-gray-800">Confirm Cancellation</h4>
+                        <p class="mb-4 text-gray-600">Are you sure you want to cancel this deal? You will need to submit a new demand to restart the process.</p>
+                        <div class="flex justify-end space-x-3">
+                            <button onclick="hideCancelModal()" class="px-4 py-2 text-gray-600 rounded-lg hover:bg-gray-100">Go Back</button>
+                            <button onclick="cancelDeal(); hideCancelModal();" class="px-4 py-2 rounded-lg font-bold text-white hover:opacity-90" style="background-color: #C0392B;">
+                                Yes, Cancel Deal
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+
+            `;
+        }
+
+        // Default screen content
+        return `<h2 class="text-2xl font-bold text-gray-800">Contractor ${screenKey} (WIP)</h2><p class="mt-4 text-gray-600">Placeholder screen.</p>`;
+    }
+
+    // --- Employer Screens ---
+
+    function renderEmployerConfirmation(deal) {
+        const { hex } = ROLE_CONFIG.Employer;
+        return `
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Review Contractor Demand</h2>
+            <div class="p-6 rounded-xl shadow-lg bg-gray-50 border border-gray-200 mb-6">
+                <p class="text-sm text-gray-500">Proposed Rate (From Contractor)</p>
+                <p class="text-4xl font-extrabold" style="color: ${hex};">$${deal.rate}.00 / hr</p>
+                <p class="text-sm text-gray-500 mt-2">Service Model: <span class="font-semibold text-gray-700">${deal.option}</span></p>
+            </div>
+
+            <div class="terms-summary">
+                <h4>💼 Deal Terms Summary</h4>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span>Work Hours:</span>
+                        <span class="font-semibold">${deal.workHours}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Work Days:</span>
+                        <span class="font-semibold">${deal.workDays}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <h3 class="text-xl font-bold text-gray-700 mt-8 mb-4">Start Chat Negotiation</h3>
+            <p class="text-sm text-gray-600 mb-4">Click below to start discussing terms and finalize the agreement with the contractor.</p>
+
+            <button onclick="startChatNegotiation()" class="w-full p-3 rounded-xl shadow-lg font-bold text-white transition-colors hover:opacity-90" style="background-color: ${hex};">
+                💬 Start Chat Negotiation
+            </button>
+        `;
+    }
+
+    function renderEmployerScreen(screenKey) {
+        const deal = globalSharedState.deal;
+        const isDemandSubmitted = deal.status === 'Demand Submitted - Awaiting Employer Review';
+        const isChatPhase = deal.status === 'Chat Negotiation';
+        const isAwaitingDemand = deal.status.includes('Awaiting Initial Demand') || deal.status.includes('New Demand');
+        const { hex } = ROLE_CONFIG.Employer;
+        
+        if (screenKey === 'ContractorView') {
+            if (isAwaitingDemand) {
+                return `
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Talent Search: Alex R.</h2>
+                    <div class="p-6 rounded-xl shadow-lg bg-yellow-50 text-center border-2 border-yellow-300">
+                        <p class="text-xl font-semibold text-yellow-800">Awaiting Contractor Demand</p>
+                        <p class="text-sm text-gray-600 mt-2">The job seeker must submit their proposed rate before you can make an offer or accept the deal.</p>
+                    </div>
+                `;
+            }
+            
+            if (isDemandSubmitted) {
+                return renderEmployerConfirmation(deal);
+            }
+
+            if (isChatPhase) {
+                return `
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Chat with Contractor 💬</h2>
+                    <div class="p-4 rounded-xl shadow-lg bg-green-50 text-center border-2 border-green-300 mb-6">
+                        <p class="text-xl font-semibold text-green-800">Negotiation Session Active</p>
+                        <p class="text-sm text-gray-600 mt-2">Chat with the contractor to finalize terms. Once agreed, confirm the deal.</p>
+                    </div>
+                    <div class="grid grid-cols-1 gap-4">
+                        <button onclick="navigate('Chat', 'Employer')" class="p-4 bg-blue-100 hover:bg-blue-200 rounded-xl shadow-md flex flex-col items-center transition-all">
+                            <span class="text-3xl">💬</span>
+                            <span class="text-sm font-semibold text-blue-700 mt-2">Open Chat</span>
+                        </button>
+                        <button onclick="showDealConfirmation()" class="p-4 bg-green-100 hover:bg-green-200 rounded-xl shadow-md flex flex-col items-center transition-all">
+                            <span class="text-3xl">✅</span>
+                            <span class="text-sm font-semibold text-green-700 mt-2">Confirm Deal</span>
+                        </button>
+                    </div>
+                `;
+            }
+
+            // If deal is past submission (Pending, Approved, Canceled, etc.), show status view
+            let statusBadge = '';
+            if (deal.status.includes('Pending')) statusBadge = `<span class="px-3 py-1 text-xs font-semibold rounded-full text-yellow-800 bg-yellow-200">Awaiting Agent Review</span>`;
+            else if (deal.status.includes('Processed')) statusBadge = `<span class="px-3 py-1 text-xs font-semibold rounded-full text-green-800 bg-green-200">Approved</span>`;
+            else if (deal.status.includes('Terminated') || deal.status.includes('Canceled') || deal.status.includes('Deleted') || deal.status.includes('Rejected')) statusBadge = `<span class="px-3 py-1 text-xs font-semibold rounded-full text-red-800 bg-red-200">Terminated</span>`;
+
+            return `
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Deal Status: Alex R.</h2>
+                <div class="p-6 rounded-xl shadow-lg bg-gray-50 border border-gray-200">
+                    <div class="flex justify-between items-center mb-4">
+                        <p class="text-4xl font-extrabold text-teal-600">$${deal.rate}.00 / hr</p>
+                        ${statusBadge}
+                    </div>
+                    <p class="text-sm text-gray-500 border-t pt-2">
+                        Status Detail: ${deal.status}
+                    </p>
+                </div>
+                <button onclick="navigate('ActiveDeals', 'Employer')" class="w-full mt-4 p-3 rounded-xl shadow-md font-bold text-white bg-gray-500 hover:bg-gray-600 transition-colors">
+                    View Full Deal Log
+                </button>
+            `;
+        }
+
+        if (screenKey === 'Chat') {
+            return renderChat('Employer');
+        }
+
+        if (screenKey === 'Search') {
+             if (isDemandSubmitted || deal.status.includes('Pending')) {
+                return `<h2 class="text-2xl font-bold text-gray-800 mb-6">Active Search Board</h2>
+                        <div class="p-6 rounded-xl shadow-lg bg-blue-50 text-center border-2 border-blue-300">
+                            <p class="text-xl font-semibold text-blue-800">Deal In Progress</p>
+                            <p class="text-sm text-gray-600 mt-2">You currently have a deal running with Alex R. View status in the 'View' tab.</p>
+                        </div>`;
+             }
+             // Simplified search view
+            return `
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Talent Search Board</h2>
+                <div class="space-y-4">
+                    <input type="text" placeholder="Search by skill, title, or rate..." class="w-full p-3 rounded-lg border border-gray-300 focus:ring-teal-500">
+                    <div class="flex space-x-2 overflow-x-auto pb-2">
+                        <span class="px-3 py-1 text-sm rounded-full bg-teal-100 text-teal-800 font-medium whitespace-nowrap">Ready Today</span>
+                        <span class="px-3 py-1 text-sm rounded-full bg-teal-100 text-teal-800 font-medium whitespace-nowrap">Verified</span>
+                        <span class="px-3 py-1 text-sm rounded-full bg-teal-100 text-teal-800 font-medium whitespace-nowrap">High-Value</span>
+                    </div>
+                </div>
+                <h3 class="text-xl font-bold text-gray-700 mt-6 mb-4">Top Matches</h3>
+                <div class="p-4 bg-gray-50 rounded-xl shadow-md cursor-pointer hover:bg-gray-100" onclick="navigate('ContractorView', 'Employer')">
+                    <div class="flex items-center space-x-3">
+                        <div class="h-12 w-12 rounded-full bg-cyan-200 flex items-center justify-center text-xl">👤</div>
+                        <div>
+                            <p class="font-bold text-gray-900">Alex R. <span class="text-xs text-green-600 ml-1">✅ Verified</span></p>
+                            <p class="text-sm text-gray-600">Senior UX Designer</p>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-3 border-t flex justify-between items-center">
+                         <span class="text-lg font-extrabold text-teal-600">$70-85 / hr</span>
+                         <span class="text-xs text-gray-500">Demand: New</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        return `<h2 class="text-2xl font-bold text-gray-800">Employer ${screenKey} (WIP)</h2><p class="mt-4 text-gray-600">Placeholder screen.</p>`;
+    }
+
+    // --- Agent Screens ---
+
+    function renderAgentDashboard() {
+        const { hex } = ROLE_CONFIG.Agent;
+        const deal = globalSharedState.deal;
+        
+        // Calculate metrics
+        const dealValue = deal.rate ? (deal.rate * 40 * 4).toFixed(0) : 0; // Monthly value
+        const totalActivities = globalSharedState.activityFeed.length;
+        const chatMessages = globalSharedState.negotiationChat.length;
+        const agentActionCount = globalSharedState.agentActions.length;
+        
+        const statusColor = deal.status.includes('Processed') ? 'green' : 
+                           deal.status.includes('Pending') ? 'yellow' :
+                           deal.status.includes('Chat') ? 'purple' :
+                           deal.status.includes('Awaiting') ? 'gray' : 'red';
+        
+        return `
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Agent Dashboard</h2>
+            
+            <!-- Quick Stats -->
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <div class="modern-card bg-gradient-to-br from-purple-500 to-purple-600 text-white p-4">
+                    <p class="text-xs opacity-80">Deal Value</p>
+                    <p class="text-2xl font-bold">$${dealValue}</p>
+                    <p class="text-xs opacity-75">per month</p>
+                </div>
+                <div class="modern-card bg-gradient-to-br from-blue-500 to-blue-600 text-white p-4">
+                    <p class="text-xs opacity-80">Activities</p>
+                    <p class="text-2xl font-bold">${totalActivities}</p>
+                    <p class="text-xs opacity-75">total events</p>
+                </div>
+                <div class="modern-card bg-gradient-to-br from-green-500 to-green-600 text-white p-4">
+                    <p class="text-xs opacity-80">Chat Messages</p>
+                    <p class="text-2xl font-bold">${chatMessages}</p>
+                    <p class="text-xs opacity-75">exchanged</p>
+                </div>
+                <div class="modern-card bg-gradient-to-br from-pink-500 to-pink-600 text-white p-4">
+                    <p class="text-xs opacity-80">Agent Actions</p>
+                    <p class="text-2xl font-bold">${agentActionCount}</p>
+                    <p class="text-xs opacity-75">performed</p>
+                </div>
+            </div>
+
+            <!-- Current Deal Status -->
+            <div class="modern-card mb-6 bg-${statusColor}-50 border-2 border-${statusColor}-300">
+                <h3 class="font-bold text-lg mb-3 text-${statusColor}-800">📌 Current Deal Status</h3>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Status:</span>
+                        <span class="font-bold text-${statusColor}-700">${deal.status}</span>
+                    </div>
+                    ${deal.rate ? `
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Hourly Rate:</span>
+                            <span class="font-bold">$${deal.rate}/hr</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Service Model:</span>
+                            <span class="font-semibold">${deal.option}</span>
+                        </div>
+                    ` : '<p class="text-gray-500 italic text-center py-2">No active deal</p>'}
+                </div>
+            </div>
+
+            <!-- Deal Management Tools -->
+            <h3 class="text-xl font-bold text-gray-700 mb-3">🛠️ Quick Actions</h3>
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <button onclick="navigate('ReviewConsole', 'Agent')" class="modern-card bg-gradient-to-br from-cyan-100 to-cyan-200 hover:from-cyan-200 hover:to-cyan-300 flex flex-col items-center p-4 transition-all">
+                    <span class="text-3xl mb-2">👀</span>
+                    <span class="text-sm font-semibold text-cyan-800">Review Deal</span>
+                </button>
+                <button onclick="navigate('Analytics', 'Agent')" class="modern-card bg-gradient-to-br from-purple-100 to-purple-200 hover:from-purple-200 hover:to-purple-300 flex flex-col items-center p-4 transition-all">
+                    <span class="text-3xl mb-2">📈</span>
+                    <span class="text-sm font-semibold text-purple-800">View Analytics</span>
+                </button>
+                <button onclick="navigate('Timeline', 'Agent')" class="modern-card bg-gradient-to-br from-green-100 to-green-200 hover:from-green-200 hover:to-green-300 flex flex-col items-center p-4 transition-all">
+                    <span class="text-3xl mb-2">⏱️</span>
+                    <span class="text-sm font-semibold text-green-800">View Timeline</span>
+                </button>
+                <button onclick="toggleActivityFeed()" class="modern-card bg-gradient-to-br from-orange-100 to-orange-200 hover:from-orange-200 hover:to-orange-300 flex flex-col items-center p-4 transition-all">
+                    <span class="text-3xl mb-2">🔔</span>
+                    <span class="text-sm font-semibold text-orange-800">Activity Feed</span>
+                </button>
+            </div>
+
+            <!-- Recent Agent Actions -->
+            <h3 class="text-xl font-bold text-gray-700 mb-3">📋 Recent Actions</h3>
+            <div class="space-y-2">
+                ${globalSharedState.agentActions.slice(-5).reverse().map(action => `
+                    <div class="p-3 bg-gray-50 rounded-lg border border-gray-200 text-sm">
+                        <div class="flex justify-between items-start">
+                            <span class="font-semibold text-gray-800">${action.action}</span>
+                            <span class="text-xs text-gray-500">${action.timestamp}</span>
+                        </div>
+                        ${action.note ? `<p class="text-gray-600 text-xs mt-1">${action.note}</p>` : ''}
+                    </div>
+                `).join('') || '<p class="text-gray-500 text-center py-4 text-sm">No agent actions yet</p>'}
+            </div>
+        `;
+    }
+
+    function renderAgentAnalytics() {
+        const deal = globalSharedState.deal;
+        const dealValue = deal.rate ? (deal.rate * 40 * 4).toFixed(0) : 0;
+        const annualValue = deal.rate ? (deal.rate * 40 * 52).toFixed(0) : 0;
+        
+        // Risk assessment
+        const riskColor = deal.riskLevel === 'high' ? 'red' : deal.riskLevel === 'medium' ? 'yellow' : 'green';
+        const priorityColor = deal.priority === 'urgent' ? 'red' : deal.priority === 'high' ? 'orange' : 'blue';
+        
+        return `
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">📈 Deal Analytics</h2>
+            
+            <!-- Financial Metrics -->
+            <div class="modern-card mb-6 bg-gradient-to-br from-green-50 to-emerald-50">
+                <h3 class="font-bold text-lg mb-4 text-gray-800">💰 Financial Analysis</h3>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center p-3 bg-white rounded-lg">
+                        <span class="text-gray-600">Hourly Rate</span>
+                        <span class="font-bold text-2xl text-green-600">$${deal.rate || 0}</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-white rounded-lg">
+                        <span class="text-gray-600">Monthly Value (160hrs)</span>
+                        <span class="font-bold text-xl text-green-600">$${dealValue}</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-white rounded-lg">
+                        <span class="text-gray-600">Annual Value (2080hrs)</span>
+                        <span class="font-bold text-xl text-green-600">$${annualValue}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Risk Assessment -->
+            <div class="modern-card mb-6">
+                <h3 class="font-bold text-lg mb-4 text-gray-800">⚠️ Risk & Priority Assessment</h3>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Risk Level</label>
+                        <select id="risk-level" onchange="updateRiskLevel(this.value)" class="w-full p-3 rounded-lg border-2 border-gray-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20">
+                            <option value="low" ${deal.riskLevel === 'low' ? 'selected' : ''}>🟢 Low Risk</option>
+                            <option value="medium" ${deal.riskLevel === 'medium' ? 'selected' : ''}>🟡 Medium Risk</option>
+                            <option value="high" ${deal.riskLevel === 'high' ? 'selected' : ''}>🔴 High Risk</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Priority Level</label>
+                        <select id="priority-level" onchange="updatePriority(this.value)" class="w-full p-3 rounded-lg border-2 border-gray-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20">
+                            <option value="low" ${deal.priority === 'low' ? 'selected' : ''}>⬇️ Low Priority</option>
+                            <option value="normal" ${deal.priority === 'normal' ? 'selected' : ''}>➡️ Normal Priority</option>
+                            <option value="high" ${deal.priority === 'high' ? 'selected' : ''}>⬆️ High Priority</option>
+                            <option value="urgent" ${deal.priority === 'urgent' ? 'selected' : ''}>🔥 Urgent</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Compliance Checklist -->
+            <div class="modern-card mb-6">
+                <h3 class="font-bold text-lg mb-4 text-gray-800">✅ Compliance & Verification</h3>
+                <div class="space-y-3">
+                    <label class="flex items-center p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-all">
+                        <input type="checkbox" ${deal.complianceChecked ? 'checked' : ''} onchange="toggleCompliance(this.checked)" class="w-5 h-5 text-pink-600 rounded focus:ring-2 focus:ring-pink-500">
+                        <span class="ml-3 text-gray-700 font-semibold">Compliance Documentation Verified</span>
+                    </label>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Background Check Status</label>
+                        <select id="background-check" onchange="updateBackgroundCheck(this.value)" class="w-full p-3 rounded-lg border-2 border-gray-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20">
+                            <option value="pending" ${deal.backgroundCheckStatus === 'pending' ? 'selected' : ''}>⏳ Pending</option>
+                            <option value="passed" ${deal.backgroundCheckStatus === 'passed' ? 'selected' : ''}>✅ Passed</option>
+                            <option value="failed" ${deal.backgroundCheckStatus === 'failed' ? 'selected' : ''}>❌ Failed</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Analytics -->
+            <div class="modern-card">
+                <h3 class="font-bold text-lg mb-4 text-gray-800">💬 Communication Metrics</h3>
+                <div class="space-y-2">
+                    <div class="flex justify-between p-2 border-b">
+                        <span class="text-gray-600">Total Messages</span>
+                        <span class="font-bold">${globalSharedState.negotiationChat.length}</span>
+                    </div>
+                    <div class="flex justify-between p-2 border-b">
+                        <span class="text-gray-600">Contractor Messages</span>
+                        <span class="font-bold text-cyan-600">${globalSharedState.negotiationChat.filter(m => m.type === 'contractor').length}</span>
+                    </div>
+                    <div class="flex justify-between p-2 border-b">
+                        <span class="text-gray-600">Employer Messages</span>
+                        <span class="font-bold text-teal-600">${globalSharedState.negotiationChat.filter(m => m.type === 'employer').length}</span>
+                    </div>
+                    <div class="flex justify-between p-2">
+                        <span class="text-gray-600">System Messages</span>
+                        <span class="font-bold text-gray-600">${globalSharedState.negotiationChat.filter(m => m.type === 'system').length}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderAgentTimeline() {
+        const activities = globalSharedState.activityFeed;
+        
+        return `
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">⏱️ Deal Timeline</h2>
+            
+            <div class="mb-4 p-4 bg-gradient-to-r from-pink-100 to-purple-100 rounded-xl border-2 border-pink-300">
+                <p class="text-sm font-semibold text-gray-800">📊 Total Events: ${activities.length}</p>
+                <p class="text-xs text-gray-600 mt-1">Complete activity history for this deal</p>
+            </div>
+
+            <div class="space-y-3 max-h-[600px] overflow-y-auto">
+                ${activities.map((activity, index) => {
+                    const isRecent = index < 3;
+                    const typeColor = activity.type === 'contractor' ? 'cyan' :
+                                     activity.type === 'employer' ? 'teal' :
+                                     activity.type === 'agent' ? 'pink' : 'gray';
+                    const typeIcon = activity.type === 'contractor' ? '👤' :
+                                    activity.type === 'employer' ? '🏢' :
+                                    activity.type === 'agent' ? '🎯' : 'ℹ️';
+                    
+                    return `
+                        <div class="relative pl-8 pb-4 ${isRecent ? 'animate-pulse' : ''}">
+                            <!-- Timeline dot -->
+                            <div class="absolute left-0 top-1 w-6 h-6 bg-${typeColor}-500 rounded-full flex items-center justify-center text-white text-xs shadow-lg">
+                                ${typeIcon}
+                            </div>
+                            <!-- Timeline line -->
+                            ${index < activities.length - 1 ? '<div class="absolute left-3 top-8 w-0.5 h-full bg-gray-200"></div>' : ''}
+                            
+                            <!-- Content -->
+                            <div class="modern-card bg-${typeColor}-50 border-l-4 border-${typeColor}-500 ml-2">
+                                <div class="flex justify-between items-start mb-1">
+                                    <span class="font-bold text-${typeColor}-800 text-sm">${activity.sender}</span>
+                                    <span class="text-xs text-gray-500">${activity.timestamp}</span>
+                                </div>
+                                <p class="text-sm text-gray-700">${activity.message}</p>
+                                ${isRecent ? '<span class="text-xs bg-green-200 text-green-800 px-2 py-1 rounded-full mt-2 inline-block">Recent</span>' : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('') || '<p class="text-gray-500 text-center py-8">No timeline events yet</p>'}
+            </div>
+
+            <div class="mt-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                <button onclick="exportTimeline()" class="w-full p-3 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-lg font-bold hover:from-pink-600 hover:to-purple-600 transition-all">
+                    📥 Export Timeline Report
+                </button>
+            </div>
+        `;
+    }
+
+    function renderAgentScreen(screenKey) {
+        const { hex } = ROLE_CONFIG.Agent;
+        const deal = globalSharedState.deal;
+        
+        const isReadyForReview = deal.status === 'Ready for Agent Review';
+        const isChatNegotiation = deal.status === 'Chat Negotiation';
+        const isAwaitingDemand = deal.status.includes('Awaiting Initial Demand') || deal.status.includes('New Demand Available');
+        const isTerminated = deal.status.includes('Canceled') || deal.status.includes('Rejected') || deal.status.includes('Deleted');
+        
+        if (screenKey === 'Dashboard') {
+            return renderAgentDashboard();
+        }
+
+        if (screenKey === 'Analytics') {
+            return renderAgentAnalytics();
+        }
+
+        if (screenKey === 'Timeline') {
+            return renderAgentTimeline();
+        }
+        
+        if (screenKey === 'ReviewConsole') {
+            
+            let statusColor = 'bg-gray-400';
+            if (isReadyForReview) statusColor = 'bg-green-500';
+            else if (isChatNegotiation) statusColor = 'bg-purple-500';
+            else if (isTerminated || isAwaitingDemand) statusColor = 'bg-red-600';
+            
+            let actionHTML = '';
+            let deleteDisabled = isAwaitingDemand;
+
+            if (isReadyForReview) {
+                actionHTML = `
+                    <div class="mb-4 p-3 bg-blue-100 border-2 border-blue-500 rounded-lg text-center">
+                        <p class="text-blue-800 font-bold">⏳ Deal Ready for Final Review</p>
+                        <p class="text-blue-700 text-sm">Review all terms and chat history before approving</p>
+                    </div>
+                    <div class="flex space-x-3 mt-4">
+                        <button onclick="approveDeal()" class="flex-1 p-3 rounded-xl font-bold text-white bg-green-600 hover:bg-green-700 transition-colors shadow-lg">
+                            ✅ Approve & Finalize
+                        </button>
+                        <button onclick="rejectDeal()" class="flex-1 p-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 transition-colors shadow-lg">
+                            ❌ Reject Deal
+                        </button>
+                    </div>
+                `;
+            } else if (!isAwaitingDemand) {
+                 actionHTML = `
+                    <div class="mt-4 p-4 rounded-lg text-center font-medium bg-gray-100 text-gray-700">
+                        Deal status: ${deal.status}. ${isChatNegotiation ? 'Waiting for employer to finalize terms.' : 'Deal is currently locked.'}
+                    </div>
+                `;
+            } else {
+                 actionHTML = `
+                    <div class="mt-4 p-4 rounded-lg text-center font-medium bg-gray-100 text-gray-700">
+                        No Deal Submitted. Awaiting Contractor demand.
+                    </div>
+                `;
+            }
+
+            return `
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">Deal Review Console</h2>
+                <div class="p-4 rounded-xl shadow-md text-white ${statusColor} mb-6">
+                    <p class="text-xs opacity-80">Current Workflow Status</p>
+                    <p class="text-xl font-extrabold">${deal.status.split(' - ')[0]}</p>
+                </div>
+
+                <h3 class="text-xl font-bold text-gray-700 mb-3">Deal Terms Summary</h3>
+                ${deal.rate ? `
+                    <div class="space-y-3 p-4 bg-gray-50 rounded-lg border">
+                        <div class="flex justify-between border-b pb-1">
+                            <span class="text-gray-600">Contractor</span>
+                            <span class="font-semibold text-gray-900">Alex R. (UX Designer)</span>
+                        </div>
+                        <div class="flex justify-between border-b pb-1">
+                            <span class="text-gray-600">Hourly Rate</span>
+                            <span class="font-bold text-lg" style="color: ${hex};">$${deal.rate}.00/hr</span>
+                        </div>
+                        <div class="flex justify-between border-b pb-1">
+                            <span class="text-gray-600">Work Hours</span>
+                            <span class="font-semibold text-gray-900">${deal.workHours}</span>
+                        </div>
+                        <div class="flex justify-between border-b pb-1">
+                            <span class="text-gray-600">Work Days</span>
+                            <span class="font-semibold text-gray-900">${deal.workDays}</span>
+                        </div>
+                        <div class="flex justify-between border-b pb-1">
+                            <span class="text-gray-600">Service Model</span>
+                            <span class="font-semibold text-gray-900">${deal.option}</span>
+                        </div>
+                    </div>
+                ` : `
+                    <div class="p-4 bg-gray-100 rounded-lg text-gray-500 text-center">No active deal information to display.</div>
+                `}
+
+                ${isReadyForReview ? `
+                    <h3 class="text-xl font-bold text-gray-700 mt-8 mb-3">📋 Complete Chat History</h3>
+                    <div class="agent-chat-view p-4 bg-gray-100 rounded-lg border max-h-64 overflow-y-auto">
+                        ${globalSharedState.negotiationChat.map(msg => `
+                            <div class="mb-3 pb-2 border-b border-gray-200">
+                                <div class="chat-sender ${msg.type}">${msg.sender}</div>
+                                <div class="text-sm text-gray-700">${msg.message}</div>
+                                <div class="text-xs text-gray-500">${msg.timestamp}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <h3 class="text-xl font-bold text-gray-700 mt-8 mb-3">📝 Agent Notes</h3>
+                    <textarea id="agent-notes" placeholder="Add your review notes here..." class="w-full p-3 rounded-lg border-2 border-gray-200 focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 min-h-[100px]" onchange="saveAgentNotes(this.value)">${deal.agentNotes}</textarea>
+                ` : ''}
+                
+                <h3 class="text-xl font-bold text-gray-700 mt-8 mb-3">Action Required</h3>
+                ${actionHTML}
+
+                <div class="mt-8 pt-4 border-t border-gray-200">
+                    <h4 class="text-lg font-bold text-red-700 mb-2">⚠️ Destructive Action (Audit Control)</h4>
+                    <button onclick="deleteDeal()" class="w-full p-3 rounded-xl shadow-md font-bold text-white bg-red-800 hover:bg-red-900 transition-colors disabled:opacity-50" ${deleteDisabled ? 'disabled' : ''}>
+                        🗑️ Permanently Delete Deal
+                    </button>
+                </div>
+
+                <!-- Quick Navigation -->
+                <div class="mt-6 pt-4 border-t border-gray-200">
+                    <h4 class="text-sm font-bold text-gray-700 mb-3">📊 Quick Navigation</h4>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="navigate('Dashboard', 'Agent')" class="p-2 bg-purple-100 hover:bg-purple-200 rounded-lg text-xs font-semibold text-purple-700 transition-all">
+                            Dashboard
+                        </button>
+                        <button onclick="navigate('Analytics', 'Agent')" class="p-2 bg-blue-100 hover:bg-blue-200 rounded-lg text-xs font-semibold text-blue-700 transition-all">
+                            Analytics
+                        </button>
+                        <button onclick="navigate('Timeline', 'Agent')" class="p-2 bg-green-100 hover:bg-green-200 rounded-lg text-xs font-semibold text-green-700 transition-all">
+                            Timeline
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        return `<h2 class="text-2xl font-bold text-gray-800">Agent ${screenKey} (WIP)</h2><p class="mt-4 text-gray-600">Placeholder screen.</p>`;
+    }
+
+    // --- Business Logic Functions (Enhanced) ---
+
+    /** Contractor submits their initial proposed rate and option. */
+    function submitInitialDemand() {
+        const rateEl = document.getElementById('demand-rate');
+        const optionEl = document.getElementById('demand-option');
+        const hoursEl = document.getElementById('work-hours');
+        const daysEl = document.getElementById('work-days');
+        
+        const rate = parseFloat(rateEl.value);
+        const option = optionEl.value;
+        const workHours = hoursEl.value.trim();
+        const workDays = daysEl.value.trim();
+
+        if (isNaN(rate) || rate < 10) {
+            alert('Please enter a valid hourly rate (min $10).');
+            return;
+        }
+        if (!option) {
+            alert('Please select a service option.');
+            return;
+        }
+        if (!workHours || !workDays) {
+            alert('Please provide work hours and work days.');
+            return;
+        }
+        
+        // Reset and update deal state
+        globalSharedState.deal.rate = rate;
+        globalSharedState.deal.option = option;
+        globalSharedState.deal.workHours = workHours;
+        globalSharedState.deal.workDays = workDays;
+        globalSharedState.deal.status = 'Demand Submitted - Awaiting Employer Review';
+        
+        addActivity('Contractor', `Demand submitted: $${rate}/hr, ${workHours}, ${workDays}`, 'contractor');
+
+        alert(`Demand submitted! The Employer will review and can start chat negotiation.`);
+        
+        // Navigate relevant roles
+        navigate('Status', 'Contractor');
+        navigate('ContractorView', 'Employer');
+        navigate('ReviewConsole', 'Agent');
+        renderAllViews();
+    }
+
+    /** Employer starts chat negotiation */
+    function startChatNegotiation() {
+        if (globalSharedState.deal.status !== 'Demand Submitted - Awaiting Employer Review') {
+            alert('Action Blocked: Deal must be in review status.');
+            return;
+        }
+
+        globalSharedState.deal.status = 'Chat Negotiation';
+        
+        // Add system message to chat
+        globalSharedState.negotiationChat.push({
+            sender: 'System',
+            message: 'Chat negotiation started. Please discuss terms and finalize agreement.',
+            timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+            type: 'system'
+        });
+
+        addActivity('Employer', 'Started chat negotiation with contractor', 'employer');
+
+        alert('Chat negotiation started! Both parties can now discuss terms.');
+        
+        // Navigate to chat
+        navigate('Chat', 'Employer');
+        navigate('Chat', 'Contractor');
+        renderAllViews();
+    }
+
+    /** Employer confirms and submits deal to agent */
+    function showDealConfirmation() {
+        const deal = globalSharedState.deal;
+        
+        const confirmHTML = `
+            <div id="deal-confirmation-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div class="bg-white p-6 rounded-xl shadow-2xl max-w-md w-full">
+                    <h4 class="text-xl font-bold mb-4 text-gray-800">Confirm Final Deal</h4>
+                    
+                    <div class="mb-4 p-4 bg-gray-50 rounded-lg">
+                        <h5 class="font-semibold mb-2">Deal Summary:</h5>
+                        <div class="text-sm space-y-1">
+                            <div class="flex justify-between">
+                                <span>Hourly Rate:</span>
+                                <span class="font-bold">$${deal.rate}.00/hr</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Work Hours:</span>
+                                <span class="font-semibold">${deal.workHours}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Work Days:</span>
+                                <span class="font-semibold">${deal.workDays}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Service:</span>
+                                <span class="font-semibold">${deal.option}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <p class="mb-4 text-sm text-gray-600">Confirm this deal and submit to the hiring agent for final approval.</p>
+                    
+                    <div class="flex justify-end space-x-3">
+                        <button onclick="hideDealConfirmation()" class="px-4 py-2 text-gray-600 rounded-lg hover:bg-gray-100">Cancel</button>
+                        <button onclick="confirmAndSubmitToAgent(); hideDealConfirmation();" class="px-4 py-2 rounded-lg font-bold text-white hover:opacity-90" style="background-color: #10B981;">
+                            ✅ Confirm & Submit
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', confirmHTML);
+    }
+
+    function hideDealConfirmation() {
+        const modal = document.getElementById('deal-confirmation-modal');
+        if (modal) {
+            modal.remove();
+        }
+    }
+
+    function confirmAndSubmitToAgent() {
+        globalSharedState.deal.status = 'Pending Agent Review';
+        
+        // Add system message
+        globalSharedState.negotiationChat.push({
+            sender: 'System',
+            message: 'Deal confirmed and submitted to agent for final approval.',
+            timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+            type: 'system'
+        });
+
+        addActivity('Employer', 'Confirmed deal and submitted to agent for approval', 'employer');
+
+        alert('Deal submitted to agent! They will review the chat history and terms.');
+        
+        // Navigate all roles
+        navigate('ContractorView', 'Employer');
+        navigate('Status', 'Contractor');
+        navigate('ReviewConsole', 'Agent');
+        renderAllViews();
+    }
+
+
+    
+
+    
+    // --- Agent Management Functions ---
+    
+    /** Update risk level */
+    function updateRiskLevel(level) {
+        globalSharedState.deal.riskLevel = level;
+        logAgentAction('Updated Risk Level', `Changed risk level to: ${level.toUpperCase()}`);
+        addActivity('Agent', `Risk level updated to: ${level.toUpperCase()}`, 'agent');
+        renderAllViews();
+    }
+
+    /** Update priority */
+    function updatePriority(priority) {
+        globalSharedState.deal.priority = priority;
+        logAgentAction('Updated Priority', `Changed priority to: ${priority.toUpperCase()}`);
+        addActivity('Agent', `Priority updated to: ${priority.toUpperCase()}`, 'agent');
+        renderAllViews();
+    }
+
+    /** Toggle compliance checkbox */
+    function toggleCompliance(checked) {
+        globalSharedState.deal.complianceChecked = checked;
+        const status = checked ? 'VERIFIED' : 'UNVERIFIED';
+        logAgentAction('Compliance Status', `Compliance documentation marked as: ${status}`);
+        addActivity('Agent', `Compliance documentation ${status}`, 'agent');
+        renderAllViews();
+    }
+
+    /** Update background check status */
+    function updateBackgroundCheck(status) {
+        globalSharedState.deal.backgroundCheckStatus = status;
+        logAgentAction('Background Check', `Background check status: ${status.toUpperCase()}`);
+        addActivity('Agent', `Background check status: ${status.toUpperCase()}`, 'agent');
+        renderAllViews();
+    }
+
+    /** Save agent notes */
+    function saveAgentNotes(notes) {
+        globalSharedState.deal.agentNotes = notes;
+        logAgentAction('Notes Updated', 'Agent review notes saved');
+        saveToLocalStorage();
+    }
+
+    /** Log agent-specific actions */
+    function logAgentAction(action, note = '') {
+        const agentAction = {
+            action,
+            note,
+            timestamp: new Date().toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            }),
+            date: new Date().toLocaleDateString('en-US')
+        };
+        
+        globalSharedState.agentActions.unshift(agentAction);
+        
+        // Keep only last 50 actions
+        if (globalSharedState.agentActions.length > 50) {
+            globalSharedState.agentActions = globalSharedState.agentActions.slice(0, 50);
+        }
+        
+        saveToLocalStorage();
+    }
+
+    /** Export timeline as text report */
+    function exportTimeline() {
+        const activities = globalSharedState.activityFeed;
+        const deal = globalSharedState.deal;
+        
+        let report = `=== DEAL TIMELINE REPORT ===\n`;
+        report += `Generated: ${new Date().toLocaleString()}\n`;
+        report += `Total Events: ${activities.length}\n\n`;
+        
+        report += `=== DEAL DETAILS ===\n`;
+        report += `Status: ${deal.status}\n`;
+        report += `Hourly Rate: $${deal.rate || 'N/A'}\n`;
+        report += `Service Option: ${deal.option || 'N/A'}\n`;
+        report += `Work Hours: ${deal.workHours}\n`;
+        report += `Work Days: ${deal.workDays}\n`;
+        report += `Risk Level: ${deal.riskLevel.toUpperCase()}\n`;
+        report += `Priority: ${deal.priority.toUpperCase()}\n`;
+        report += `Compliance Verified: ${deal.complianceChecked ? 'YES' : 'NO'}\n`;
+        report += `Background Check: ${deal.backgroundCheckStatus.toUpperCase()}\n`;
+
+        
+        report += `=== ACTIVITY TIMELINE ===\n`;
+        activities.forEach((activity, index) => {
+            report += `[${activity.timestamp}] ${activity.sender}: ${activity.message}\n`;
+        });
+        
+        report += `\n=== AGENT NOTES ===\n`;
+        report += deal.agentNotes || 'No notes recorded.\n';
+        
+        // Create and download file
+        const blob = new Blob([report], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `deal-timeline-${Date.now()}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        logAgentAction('Timeline Export', 'Exported complete timeline report');
+        addActivity('Agent', 'Exported timeline report', 'agent');
+    }
+    
+    /** Contractor cancels the deal */
+    function cancelDeal() {
+        if (confirm("Are you sure you want to cancel this deal? You will need to submit a new demand to restart the process.")) {
+            globalSharedState.deal.status = 'Canceled by Contractor - New Demand Available';
+            
+            addActivity('Contractor', 'Canceled the deal. Status reset for new demand.', 'contractor');
+            // Navigate Contractor back to submission screen
+            navigate('Dashboard', 'Contractor');
+            renderAllViews();
+        }
+    }
+    
+    /** Agent approves the deal */
+    function approveDeal() {
+        if (globalSharedState.deal.status !== 'Pending Agent Review') {
+            alert('Action Blocked: Deal is not ready for agent review.');
+            return;
+        }
+
+        if (confirm('Approve this deal and finalize the contract? This will complete the hiring process.')) {
+            globalSharedState.deal.status = 'Deal Manager Processed - Ready for Escrow';
+
+            logAgentAction('Deal Approved', 'Deal approved and finalized');
+            addActivity('Agent', 'Deal APPROVED. Status: Ready for Escrow', 'agent');
+
+            alert('Deal Approved! Status updated to "Ready for Escrow." Hiring process can now begin.');
+
+            // Navigate all roles to post-approval status/dashboard
+            navigate('ContractorView', 'Employer');
+            navigate('Status', 'Contractor');
+            navigate('Dashboard', 'Agent');
+            renderAllViews();
+        }
+    }
+
+    /** Agent rejects the deal */
+    function rejectDeal() {
+        if (globalSharedState.deal.status !== 'Pending Agent Review') {
+            alert('Action Blocked: Deal is not ready for agent review.');
+            return;
+        }
+        
+        if (confirm("Reject this deal? It will require re-negotiation and submitting a new demand.")) {
+            globalSharedState.deal.status = 'Rejected by Agent - New Demand Available';
+            globalSharedState.deal.rate = null; 
+            globalSharedState.deal.option = null; 
+
+            logAgentAction('Deal Rejected', 'Deal rejected - requires new contractor demand');
+            addActivity('Agent', 'Deal REJECTED. Contractor must submit a new demand', 'agent');
+
+            alert('Deal Rejected. Contractor can submit a new demand.');
+
+            // Navigate relevant roles
+            navigate('ContractorView', 'Employer');
+            navigate('Dashboard', 'Contractor');
+            navigate('ReviewConsole', 'Agent'); 
+            renderAllViews();
+        }
+    }
+
+    /** Agent permanently deletes the deal */
+    function deleteDeal() {
+        const isAwaitingDemand = globalSharedState.deal.status.includes('Awaiting Initial Demand') || globalSharedState.deal.status.includes('New Demand Available');
+
+        if (isAwaitingDemand) {
+            alert('Cannot delete. There is no active deal record to delete.');
+            return;
+        }
+
+        if (confirm("WARNING: Are you sure you want to permanently delete this deal? This action cannot be undone and resets the flow for the Contractor.")) {
+            globalSharedState.deal.status = 'Deleted by Agent - New Demand Available';
+
+            // Reset rate/option for a clean restart
+            globalSharedState.deal.rate = null; 
+            globalSharedState.deal.option = null; 
+
+            logAgentAction('Deal Deleted', 'Deal permanently deleted - full reset initiated');
+            addActivity('Agent', 'Deal PERMANENTLY DELETED. Contractor must submit a new demand', 'agent');
+
+            alert('Deal Permanently Deleted. Contractor can submit a new demand.');
+            
+            // Navigate all roles to the correct starting point
+            navigate('ContractorView', 'Employer'); 
+            navigate('Dashboard', 'Contractor');     
+            navigate('ReviewConsole', 'Agent');   
+            renderAllViews();
+        }
+    }
+    
+    // --- Modal Helpers ---
+    function showCancelModal() {
+        document.getElementById('cancel-modal')?.classList.remove('hidden');
+    }
+
+    function hideCancelModal() {
+        document.getElementById('cancel-modal')?.classList.add('hidden');
+    }
+
+
+
+    // --- Initialization ---
+    window.onload = function() {
+        loadFromLocalStorage();
+        renderActivityFeed();
+        updateProgressTracker();
+        renderAllViews();
+        addActivity('System', 'Enhanced platform with chat loaded successfully!', 'system');
+    };
+</script>
+
+</body>
+</html>

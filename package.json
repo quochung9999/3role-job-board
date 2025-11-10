@@ -1,0 +1,24 @@
+{
+  "name": "3role-job-board-tests",
+  "version": "1.0.0",
+  "description": "Playwright tests for 3-Role Job Board Application",
+  "scripts": {
+    "test": "playwright test test-job-board.js",
+    "test:headed": "playwright test test-job-board.js --headed",
+    "test:debug": "playwright test test-job-board.js --debug",
+    "test:ui": "playwright test test-job-board.js --ui",
+    "install:browsers": "playwright install",
+    "report": "playwright show-report"
+  },
+  "keywords": [
+    "playwright",
+    "testing",
+    "e2e",
+    "job-board"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.40.0"
+  }
+}
