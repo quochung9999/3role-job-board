@@ -7,7 +7,7 @@ const { defineConfig, devices } = require('@playwright/test');
  */
 module.exports = defineConfig({
   testDir: './',
-  testMatch: 'test-job-board.js',
+  testMatch: ['test-job-board.js', 'comprehensive-test.js'],
   
   /* Maximum time one test can run */
   timeout: 120 * 1000,
