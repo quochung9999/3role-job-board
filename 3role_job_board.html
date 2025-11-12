@@ -3396,6 +3396,7 @@
         console.log('🐛 Debug Commands:');
         console.log('  - viewErrors()      : View recent error logs');
         console.log('  - viewErrorSummary(): View error summary by type');
+        console.log('  - testErrorLogging(): Test that error logging works');
     };
 
     // Make error viewing functions available in console
@@ -3415,6 +3416,47 @@
         const summary = await getErrorSummary();
         console.table(summary);
         return summary;
+    };
+
+    // Test error logging
+    window.testErrorLogging = async () => {
+        console.log('🧪 Testing error logging system...');
+        
+        // Test 1: Log a test error
+        await logError(
+            new Error('This is a test error'), 
+            'test_error', 
+            { 
+                test: true, 
+                testNumber: 1,
+                description: 'Testing error logging functionality' 
+            }
+        );
+        
+        console.log('✅ Test error logged. Waiting 2 seconds...');
+        
+        // Wait a bit for database to process
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Test 2: Retrieve and display the error
+        const errors = await getRecentErrors(5);
+        console.log('📋 Recent errors from database:');
+        console.table(errors.map(e => ({
+            time: new Date(e.created_at).toLocaleString(),
+            type: e.error_type,
+            message: e.error_message,
+            user: e.user_role || 'none',
+            context: JSON.stringify(e.context).substring(0, 50)
+        })));
+        
+        if (errors.length > 0 && errors[0].error_type === 'test_error') {
+            console.log('✅ SUCCESS! Error logging is working correctly!');
+            console.log('🎉 You can now track all application errors in Supabase.');
+        } else {
+            console.log('⚠️ Test error not found. Check Supabase dashboard manually.');
+        }
+        
+        return errors;
     };
 
 </script>
