@@ -1,0 +1,1 @@
+whenever you see kkkk please firstly show me 1/ summary what we done 2/ suggest me 5 next things to do on the chat window. only when you completely shown me the content on the copilot chat box then  you update to file whatwedone.md and 5thingwilldo.md accordingly.

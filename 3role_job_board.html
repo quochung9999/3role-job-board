@@ -3356,19 +3356,51 @@
             globalSharedState.deal.backgroundCheckStatus = 'pending';
             
             // Clear arrays
-            globalSharedState.negotiationChat.length = 0;
-            globalSharedState.activities.length = 0;
-            globalSharedState.agentActions.length = 0;
+            // Reset chat negotiation history (keep system primer)
+            if (Array.isArray(globalSharedState.negotiationChat)) {
+                globalSharedState.negotiationChat = [
+                    { sender: 'System', message: 'Chat negotiation system reset. Ready for new demand.', timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }), type: 'system' }
+                ];
+            } else {
+                globalSharedState.negotiationChat = [];
+            }
+
+            // Reset activity feed correctly (was mistakenly referencing non-existent activities array)
+            if (Array.isArray(globalSharedState.activityFeed)) {
+                globalSharedState.activityFeed.length = 0;
+            } else {
+                globalSharedState.activityFeed = [];
+            }
+
+            // Reset agent actions
+            if (Array.isArray(globalSharedState.agentActions)) {
+                globalSharedState.agentActions.length = 0;
+            } else {
+                globalSharedState.agentActions = [];
+            }
+
+            // Optional: clear deal history if present
+            if (Array.isArray(globalSharedState.dealHistory)) {
+                globalSharedState.dealHistory.length = 0;
+            }
+
+            // Optional: clear chat history baseline except system intro
+            if (Array.isArray(globalSharedState.chatHistory)) {
+                globalSharedState.chatHistory = [
+                    { sender: 'System', message: 'Platform reset. Begin new workflow.', timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }), type: 'system' }
+                ];
+            }
             
             // Clear current deal ID
+            const previousDealId = currentDealId;
             currentDealId = null;
             
             // Save to localStorage
             saveToLocalStorage();
             
             // Try to delete from database (if exists)
-            if (currentDealId) {
-                await deleteDealFromDB(currentDealId);
+            if (previousDealId) {
+                await deleteDealFromDB(previousDealId);
             }
             
             // Log activity
