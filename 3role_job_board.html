@@ -3432,8 +3432,8 @@
     function renderAgentScreen(screenKey) {
         const { hex } = ROLE_CONFIG.Agent;
         const deal = globalSharedState.deal;
-        
-        const isReadyForReview = deal.status === 'Ready for Agent Review';
+
+        const isReadyForReview = deal.status === 'Pending Agent Review';
         const isChatNegotiation = deal.status === 'Chat Negotiation';
         const isAwaitingDemand = deal.status.includes('Awaiting Initial Demand') || deal.status.includes('New Demand Available');
         const isTerminated = deal.status.includes('Canceled') || deal.status.includes('Rejected') || deal.status.includes('Deleted');
@@ -3905,7 +3905,7 @@
 
             // Update in database
             await updateDealInDB(globalSharedState.deal);
-            
+
             await logAgentAction('Deal Approved', 'Deal approved and finalized');
             await addActivity('Agent', 'Deal APPROVED. Status: Ready for Escrow', 'agent');
 
@@ -3960,21 +3960,21 @@
             globalSharedState.deal.status = 'Deleted by Agent - New Demand Available';
 
             // Reset rate/option for a clean restart
-            globalSharedState.deal.rate = null; 
-            globalSharedState.deal.option = null; 
+            globalSharedState.deal.rate = null;
+            globalSharedState.deal.option = null;
 
             // Delete from database
             await deleteDealFromDB(currentDealId);
-            
+
             await logAgentAction('Deal Deleted', 'Deal permanently deleted - full reset initiated');
             await addActivity('Agent', 'Deal PERMANENTLY DELETED. Contractor must submit a new demand', 'agent');
 
             alert('Deal Permanently Deleted. Contractor can submit a new demand.');
-            
+
             // Navigate all roles to the correct starting point
-            navigate('ContractorView', 'Employer'); 
-            navigate('Dashboard', 'Contractor');     
-            navigate('ReviewConsole', 'Agent');   
+            navigate('ContractorView', 'Employer');
+            navigate('Dashboard', 'Contractor');
+            navigate('ReviewConsole', 'Agent');
             renderAllViews();
         }
     }

@@ -38,8 +38,15 @@ Each role has a unique user interface and set of capabilities tailored to their 
 *   **Key Screens & Actions**:
     *   **Dashboard**: The starting point where the Contractor fills out and submits their initial demand (rate, work hours, etc.).
     *   **Status**: A read-only screen that provides a clear, real-time view of the deal's current stage in the workflow.
-    *   **Chat**: The negotiation interface for discussing terms directly with the Employer.
+    *   **Chat**: Advanced negotiation interface with rich text formatting, reactions, message editing, and typing indicators.
     *   **Cancel Deal**: The ability to withdraw their proposal during specific phases of the process.
+*   **Enhanced Features**:
+    *   **Rich Text Chat**: Support for **bold**, *italic*, `code`, and ```code blocks```
+    *   **Message Reactions**: Add emoji reactions to messages (👍 ❤️ 😊 🎉 ✅ ❌)
+    *   **Message Editing**: Edit messages within a 5-minute window
+    *   **Typing Indicators**: See when the employer is typing
+    *   **Read Receipts**: Track message read status
+    *   **Chat Search**: Filter and search through message history
 
 ### 🏢 Employer (The Hiring Manager)
 
@@ -50,6 +57,11 @@ Each role has a unique user interface and set of capabilities tailored to their 
     *   **Start Chat Negotiation**: The primary action to move the deal forward after reviewing the initial demand.
     *   **Confirm Deal**: The final step for the Employer, where they submit the negotiated terms to the Agent.
     *   **Active Deals**: A view to manage and see the status of multiple ongoing deals.
+*   **Enhanced Features**:
+    *   **Multi-Deal Management**: Handle multiple concurrent deals with different contractors
+    *   **Deal Selector**: Switch between active deals without losing context
+    *   **Parallel Workflows**: Manage multiple negotiation processes simultaneously
+    *   **Advanced Chat**: Full access to rich text chat with all enhanced features
 
 ### 🎯 Agent (The Deal Manager & Facilitator)
 
@@ -60,6 +72,12 @@ Each role has a unique user interface and set of capabilities tailored to their 
     *   **Approve/Reject/Delete**: The core actions the Agent can take to finalize, cancel, or permanently remove a deal.
     *   **Analytics**: A detailed view with financial analysis (monthly/annual value), risk/priority assessment tools, and compliance checklists.
     *   **Timeline**: A chronological log of every single event and state change that has occurred during the deal's lifecycle.
+*   **Enhanced Features**:
+    *   **Advanced Analytics**: Risk assessment, priority management, compliance verification, background checks
+    *   **Agent Notes**: Private note-taking system for deal review
+    *   **Timeline Export**: Download complete deal history as text reports
+    *   **Audit Trail**: Complete logging of all agent actions and decisions
+    *   **Error Monitoring**: Access to comprehensive error dashboard and logs
 
 ---
 
@@ -68,24 +86,63 @@ Each role has a unique user interface and set of capabilities tailored to their 
 - 🎯 **3-Role Job Board Application**: Single-page web app for managing hiring deals between Contractor, Employer, and Agent roles.
 - 🏗️ **Main Entry Point**: `3role_job_board.html` — contains all HTML, CSS, and JavaScript logic. Supabase backend for database, authentication, and real-time updates. State managed via browser `localStorage`.
 - 🧪 **Testing**: Automated Playwright test suite (`test-job-board.js`, `TEST_README.md`, `TEST_SUITE_OVERVIEW.md`). 50+ tests, 100% coverage, visual regression via screenshots.
+- 🐛 **Error Monitoring**: Comprehensive error logging system with localStorage persistence and Supabase sync. Interactive dashboard with filtering, charts, and export capabilities.
+- 💬 **Advanced Chat**: Real-time messaging with rich text formatting, reactions, editing, typing indicators, and read receipts.
+- 📊 **Real-time Features**: Activity feed, progress tracker, toast notifications, and cross-role synchronization.
 
 ## 5. Application Workflow
 
 - 🛠️ **Standard Deal Workflow (5 Steps)**:
   1. Contractor submits demand
   2. Employer reviews and negotiates
-  3. Chat negotiation
+  3. Chat negotiation with enhanced features
   4. Employer confirms
   5. Agent reviews, approves/rejects
   - Final state: "Deal Manager Processed - Ready for Escrow"
 - 🔀 **Alternative Flows**:
   - Agent rejection/deletion
   - Contractor cancellation during cooling-off
-  - Navigation across 10 tabs
+  - Navigation across 10+ screens per role
 - 🗂️ **Database Schema**:
   - 5 tables: users, deals, messages, activities, agent_actions
   - Row Level Security (RLS) and role-based access control
   - Realtime subscriptions and audit trail
+  - Error logging table for monitoring
+
+## 5.5 Enhanced Features
+
+### 💬 Advanced Chat System
+- **Real-time messaging** with typing indicators
+- **Rich text formatting**: **bold**, *italic*, `code`, ```code blocks```
+- **Message reactions**: 👍 ❤️ 😊 🎉 ✅ ❌
+- **Message editing**: Within 5-minute window
+- **Read receipts**: Track message read status
+- **Search functionality**: Filter messages by content
+- **Unread badges**: Visual indicators for new messages
+
+### 📊 Real-time Activity Feed
+- **Global activity monitoring** across all roles
+- **Toast notifications** for important events
+- **Activity filtering** by role and type
+- **Persistent storage** with database sync
+
+### 📈 Progress Tracker
+- **Visual workflow progress** with animated steps
+- **Real-time status updates** across all roles
+- **Detailed progress panels** with metrics
+- **Completion percentages** and status indicators
+
+### 🐛 Error Monitoring Dashboard
+- **Comprehensive error logging** to localStorage and Supabase
+- **Interactive dashboard** with filtering and charts
+- **Error trend analysis** with ASCII charts
+- **Export functionality** for error logs
+- **Resolution tracking** and status management
+
+### 👥 Multi-Deal Management
+- **Employer deal selector** for managing multiple contractors
+- **Deal switching** without losing context
+- **Parallel deal workflows** support
 
 ## 6. Role Details (with File References)
 
@@ -129,6 +186,8 @@ Each role has a unique user interface and set of capabilities tailored to their 
 - Tests: `test-job-board.js`, `TEST_README.md`, `TEST_SUITE_OVERVIEW.md`
 - Database: `supabase-schema.sql`, `supabase/config.toml`, migrations
 - Documentation: `README.md`, `bigpicture.md`, `SCREENSHOT_MAP.md`
+- Error Logs: Stored in localStorage and Supabase `error_logs` table
+- Activity Data: Stored in localStorage and Supabase tables (activities, messages, agent_actions)
 
 ---
 
