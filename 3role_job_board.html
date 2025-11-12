@@ -474,6 +474,8 @@
             padding: 0.75rem;
             background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
             border-bottom: 1px solid #e2e8f0;
+            position: relative;
+            z-index: 10;
         }
         .workflow-btn {
             padding: 0.6rem 1.2rem;
@@ -823,41 +825,41 @@
     ];
     
     const WORKFLOW_STAGES = [
-        { 
-            id: 1, 
-            name: 'Demand', 
+        {
+            id: 1,
+            name: 'Demand',
             label: 'Contractor Demand',
             icon: '📝',
-            description: 'Contractor submits initial rate and terms',
+            description: 'Awaiting Initial Demand',
             statuses: ['Awaiting Initial Demand', 'New Demand Available']
         },
-        { 
-            id: 2, 
-            name: 'Review', 
+        {
+            id: 2,
+            name: 'Review',
             label: 'Employer Review',
             icon: '👁️',
-            description: 'Employer reviews contractor proposal',
+            description: 'Employer Review',
             statuses: ['Demand Submitted - Awaiting Employer Review']
         },
-        { 
-            id: 3, 
-            name: 'Negotiation', 
+        {
+            id: 3,
+            name: 'Negotiation',
             label: 'Chat Negotiation',
             icon: '💬',
-            description: 'Both parties discuss and finalize terms',
+            description: 'Chat Negotiation',
             statuses: ['Chat Negotiation']
         },
-        { 
-            id: 4, 
-            name: 'AgentReview', 
+        {
+            id: 4,
+            name: 'AgentReview',
             label: 'Agent Approval',
             icon: '✅',
-            description: 'Deal manager reviews and approves',
+            description: 'Agent Review',
             statuses: ['Ready for Agent Review', 'Pending Agent Review']
         },
-        { 
-            id: 5, 
-            name: 'Finalized', 
+        {
+            id: 5,
+            name: 'Finalized',
             label: 'Deal Finalized',
             icon: '🎉',
             description: 'Ready for escrow and execution',
@@ -1317,13 +1319,13 @@
             <div class="space-y-4">
                 <label class="block">
                     <span class="text-gray-700 font-semibold">Proposed Hourly Rate ($)</span>
-                    <input id="demand-rate" type="number" min="10" step="1" placeholder="e.g., 75" value="${globalSharedState.deal.rate || ''}"
+                    <input id="demand-rate" data-testid="demand-rate" type="number" min="10" step="1" placeholder="e.g., 75" value="${globalSharedState.deal.rate || ''}"
                            class="mt-1 block w-full rounded-xl border-gray-200 shadow-sm p-4 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all">
                 </label>
-                
+
                 <label class="block">
                     <span class="text-gray-700 font-semibold">Preferred Service Option</span>
-                    <select id="demand-option"
+                    <select id="demand-option" data-testid="demand-option"
                             class="mt-1 block w-full rounded-xl border-gray-200 shadow-sm p-4 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all appearance-none bg-white">
                         <option value="">-- Select Option --</option>
                         <option value="Option 1 (Self-Service)">Option 1 (Self-Service)</option>
@@ -1331,23 +1333,23 @@
                         <option value="Option 3 (Managed PEO)">Option 3 (Managed PEO)</option>
                     </select>
                 </label>
-                
+
                 <div class="deal-terms-grid">
                     <label class="block">
                         <span class="text-gray-700 font-semibold">Work Hours</span>
-                        <input id="work-hours" type="text" placeholder="e.g., 9 AM - 5 PM" value="${globalSharedState.deal.workHours || ''}"
+                        <input id="work-hours" data-testid="work-hours" type="text" placeholder="e.g., 9 AM - 5 PM" value="${globalSharedState.deal.workHours || ''}"
                                class="mt-1 block w-full rounded-xl border-gray-200 shadow-sm p-4 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all">
                     </label>
-                    
+
                     <label class="block">
                         <span class="text-gray-700 font-semibold">Work Days</span>
-                        <input id="work-days" type="text" placeholder="e.g., Monday - Friday" value="${globalSharedState.deal.workDays || ''}"
+                        <input id="work-days" data-testid="work-days" type="text" placeholder="e.g., Monday - Friday" value="${globalSharedState.deal.workDays || ''}"
                                class="mt-1 block w-full rounded-xl border-gray-200 shadow-sm p-4 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all">
                     </label>
                 </div>
             </div>
-            
-            <button onclick="submitInitialDemand()" 
+
+            <button onclick="submitInitialDemand()" data-testid="submit-demand"
                     class="w-full mt-8 modern-button text-white"
                     style="background: linear-gradient(135deg, ${hex} 0%, ${hex}dd 100%);">
                 Submit Demand to Employer
@@ -1440,12 +1442,20 @@
             } else if (isPending) {
                 statusColor = 'bg-yellow-500';
                 statusText = 'Awaiting Agent final approval.';
-                
+
                 buttonHTML = `
                     <div class="text-center mt-4">
-                        <div class="p-4 bg-blue-100 rounded-xl border-2 border-blue-500 mb-3">
-                            <p class="text-blue-800 font-bold text-lg">⏳ Awaiting Final Approval</p>
-                            <p class="text-blue-700 text-sm mt-1">Agent is reviewing the deal terms</p>
+                        <div class="p-4 bg-blue-100 rounded-xl border-2 border-blue-500 mb-4">
+                            <p class="text-blue-800 font-bold text-lg">⏳ Cooling-off Period Active</p>
+                            <p class="text-blue-700 text-sm mt-1">You have 24 hours to accept or deny this deal</p>
+                        </div>
+                        <div class="flex space-x-3">
+                            <button onclick="acceptDeal()" class="flex-1 p-3 rounded-xl font-bold text-white bg-green-600 hover:bg-green-700 transition-colors shadow-lg">
+                                ✅ Accept Deal
+                            </button>
+                            <button onclick="denyDeal()" class="flex-1 p-3 rounded-xl font-bold text-white bg-red-600 hover:bg-red-700 transition-colors shadow-lg">
+                                ❌ Deny & Cancel Deal
+                            </button>
                         </div>
                     </div>
                 `;
@@ -2308,11 +2318,53 @@
         addActivity('Agent', 'Exported timeline report', 'agent');
     }
     
+    /** Contractor accepts the deal during cooling-off period */
+    function acceptDeal() {
+        if (globalSharedState.deal.status !== 'Pending Agent Review') {
+            alert('Action Blocked: Deal is not in cooling-off period.');
+            return;
+        }
+
+        if (confirm('Accept this deal? This will finalize the agreement and proceed to escrow.')) {
+            globalSharedState.deal.status = 'Contractor Accepted - Ready for Agent Review';
+
+            addActivity('Contractor', 'Accepted deal during cooling-off period', 'contractor');
+
+            alert('Deal Accepted! The agent will now review and finalize the agreement.');
+
+            // Navigate to status view
+            navigate('Status', 'Contractor');
+            renderAllViews();
+        }
+    }
+
+    /** Contractor denies the deal during cooling-off period */
+    function denyDeal() {
+        if (globalSharedState.deal.status !== 'Pending Agent Review') {
+            alert('Action Blocked: Deal is not in cooling-off period.');
+            return;
+        }
+
+        if (confirm('Deny this deal? This will cancel the agreement and require submitting a new demand.')) {
+            globalSharedState.deal.status = 'Denied by Contractor - New Demand Available';
+            globalSharedState.deal.rate = null;
+            globalSharedState.deal.option = null;
+
+            addActivity('Contractor', 'Denied deal during cooling-off period', 'contractor');
+
+            alert('Deal Denied. You can submit a new demand to restart the process.');
+
+            // Navigate back to submission form
+            navigate('Dashboard', 'Contractor');
+            renderAllViews();
+        }
+    }
+
     /** Contractor cancels the deal */
     function cancelDeal() {
         if (confirm("Are you sure you want to cancel this deal? You will need to submit a new demand to restart the process.")) {
             globalSharedState.deal.status = 'Canceled by Contractor - New Demand Available';
-            
+
             addActivity('Contractor', 'Canceled the deal. Status reset for new demand.', 'contractor');
             // Navigate Contractor back to submission screen
             navigate('Dashboard', 'Contractor');
