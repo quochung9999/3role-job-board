@@ -939,8 +939,10 @@
         try {
             const errorMessage = error instanceof Error ? error.message : String(error);
             const stackTrace = error instanceof Error ? error.stack : null;
+            const timestamp = new Date().toISOString();
             
             const errorLog = {
+                timestamp,
                 error_type: errorType,
                 error_message: errorMessage,
                 stack_trace: stackTrace,
@@ -948,7 +950,6 @@
                 user_role: currentUser?.role || null,
                 context: {
                     ...additionalContext,
-                    timestamp: new Date().toISOString(),
                     deal_id: globalSharedState?.deal?.id || null,
                     page_state: {
                         hasActiveChat: !!document.getElementById('chat-container'),
@@ -959,22 +960,36 @@
                 user_agent: navigator.userAgent
             };
 
-            // Log to Supabase
-            const { data, error: dbError } = await supabase
-                .from('error_logs')
-                .insert([errorLog])
-                .select();
+            // Always save to localStorage (primary storage for now)
+            const localErrors = JSON.parse(localStorage.getItem('error_logs') || '[]');
+            localErrors.push(errorLog);
+            // Keep only last 100 errors
+            if (localErrors.length > 100) localErrors.shift();
+            localStorage.setItem('error_logs', JSON.stringify(localErrors));
+            
+            console.log('✅ Error logged to localStorage');
 
-            if (dbError) {
-                console.error('❌ Failed to log error to database:', dbError);
-                // Fallback: log to localStorage
-                const localErrors = JSON.parse(localStorage.getItem('error_logs_fallback') || '[]');
-                localErrors.push({...errorLog, logged_at: new Date().toISOString()});
-                // Keep only last 50 errors
-                if (localErrors.length > 50) localErrors.shift();
-                localStorage.setItem('error_logs_fallback', JSON.stringify(localErrors));
-            } else {
-                console.log('✅ Error logged to database:', data);
+            // Try to log to Supabase (optional)
+            try {
+                const { data, error: dbError } = await supabase
+                    .from('error_logs')
+                    .insert([{
+                        error_type: errorType,
+                        error_message: errorMessage,
+                        stack_trace: stackTrace,
+                        user_id: currentUser?.id || null,
+                        user_role: currentUser?.role || null,
+                        context: errorLog.context,
+                        url: window.location.href,
+                        user_agent: navigator.userAgent
+                    }])
+                    .select();
+
+                if (!dbError) {
+                    console.log('✅ Error also logged to Supabase');
+                }
+            } catch (dbError) {
+                // Silently fail - localStorage is primary
             }
 
             // Also log to console for development
@@ -992,24 +1007,14 @@
     }
 
     /**
-     * Get recent error logs from Supabase
+     * Get recent error logs from localStorage
      * @param {number} limit - Number of recent errors to retrieve
-     * @returns {Promise<Array>} Array of error logs
+     * @returns {Array} Array of error logs
      */
-    async function getRecentErrors(limit = 50) {
+    function getRecentErrors(limit = 50) {
         try {
-            const { data, error } = await supabase
-                .from('error_logs')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .limit(limit);
-
-            if (error) {
-                console.error('Failed to fetch error logs:', error);
-                return [];
-            }
-
-            return data;
+            const errors = JSON.parse(localStorage.getItem('error_logs') || '[]');
+            return errors.slice(-limit).reverse(); // Most recent first
         } catch (err) {
             console.error('Error fetching error logs:', err);
             return [];
@@ -1018,24 +1023,66 @@
 
     /**
      * Get error summary (grouped by type)
-     * @returns {Promise<Array>} Array of error summaries
+     * @returns {Array} Array of error summaries
      */
-    async function getErrorSummary() {
+    function getErrorSummary() {
         try {
-            const { data, error } = await supabase
-                .from('error_summary')
-                .select('*');
-
-            if (error) {
-                console.error('Failed to fetch error summary:', error);
-                return [];
-            }
-
-            return data;
+            const errors = JSON.parse(localStorage.getItem('error_logs') || '[]');
+            const summary = {};
+            
+            errors.forEach(err => {
+                if (!summary[err.error_type]) {
+                    summary[err.error_type] = {
+                        error_type: err.error_type,
+                        count: 0,
+                        last_occurred: err.timestamp
+                    };
+                }
+                summary[err.error_type].count++;
+                if (err.timestamp > summary[err.error_type].last_occurred) {
+                    summary[err.error_type].last_occurred = err.timestamp;
+                }
+            });
+            
+            return Object.values(summary).sort((a, b) => b.count - a.count);
         } catch (err) {
             console.error('Error fetching error summary:', err);
             return [];
         }
+    }
+
+    /**
+     * Export error logs to a downloadable file
+     */
+    function exportErrorLogs() {
+        const errors = JSON.parse(localStorage.getItem('error_logs') || '[]');
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = `error-logs-${timestamp}.json`;
+        
+        // Create formatted JSON
+        const jsonStr = JSON.stringify(errors, null, 2);
+        
+        // Create download link
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        console.log(`✅ Exported ${errors.length} error logs to ${filename}`);
+        return errors.length;
+    }
+
+    /**
+     * Clear all error logs
+     */
+    function clearErrorLogs() {
+        const count = JSON.parse(localStorage.getItem('error_logs') || '[]').length;
+        localStorage.removeItem('error_logs');
+        console.log(`✅ Cleared ${count} error logs`);
+        return count;
     }
 
     // Global error handlers
@@ -3393,30 +3440,44 @@
         
         console.log('🎯 PoC Ready! Select users from dropdown to test each role.');
         console.log(`📊 Available: ${getUsersByRole('contractor').length} contractors, ${getUsersByRole('employer').length} employers`);
-        console.log('🐛 Debug Commands:');
-        console.log('  - viewErrors()      : View recent error logs');
-        console.log('  - viewErrorSummary(): View error summary by type');
-        console.log('  - testErrorLogging(): Test that error logging works');
+        console.log('🐛 Error Logging Commands:');
+        console.log('  - viewErrors()        : View recent error logs');
+        console.log('  - viewErrorSummary()  : View error summary by type');
+        console.log('  - testErrorLogging()  : Test that error logging works');
+        console.log('  - exportErrorLogs()   : Download all errors as JSON file');
+        console.log('  - clearErrorLogs()    : Clear all error logs');
     };
 
     // Make error viewing functions available in console
-    window.viewErrors = async () => {
-        const errors = await getRecentErrors(20);
+    window.viewErrors = (limit = 20) => {
+        const errors = getRecentErrors(limit);
+        if (errors.length === 0) {
+            console.log('📭 No errors logged yet');
+            return [];
+        }
         console.table(errors.map(e => ({
-            time: new Date(e.created_at).toLocaleString(),
+            time: new Date(e.timestamp).toLocaleString(),
             type: e.error_type,
-            message: e.error_message.substring(0, 100),
-            user: e.user_role || 'unknown',
-            resolved: e.resolved
+            message: e.error_message.substring(0, 80),
+            user: e.user_role || 'none',
+            deal: e.context?.deal_id?.substring(0, 8) || 'none'
         })));
+        console.log(`\n📊 Total: ${errors.length} errors`);
         return errors;
     };
 
-    window.viewErrorSummary = async () => {
-        const summary = await getErrorSummary();
+    window.viewErrorSummary = () => {
+        const summary = getErrorSummary();
+        if (summary.length === 0) {
+            console.log('📭 No errors logged yet');
+            return [];
+        }
         console.table(summary);
         return summary;
     };
+
+    window.exportErrorLogs = exportErrorLogs;
+    window.clearErrorLogs = clearErrorLogs;
 
     // Test error logging
     window.testErrorLogging = async () => {
@@ -3433,27 +3494,27 @@
             }
         );
         
-        console.log('✅ Test error logged. Waiting 2 seconds...');
+        console.log('✅ Test error logged. Waiting 1 second...');
         
-        // Wait a bit for database to process
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Wait a bit
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Test 2: Retrieve and display the error
-        const errors = await getRecentErrors(5);
-        console.log('📋 Recent errors from database:');
+        const errors = getRecentErrors(5);
+        console.log('📋 Recent errors from localStorage:');
         console.table(errors.map(e => ({
-            time: new Date(e.created_at).toLocaleString(),
+            time: new Date(e.timestamp).toLocaleString(),
             type: e.error_type,
             message: e.error_message,
-            user: e.user_role || 'none',
-            context: JSON.stringify(e.context).substring(0, 50)
+            user: e.user_role || 'none'
         })));
         
         if (errors.length > 0 && errors[0].error_type === 'test_error') {
             console.log('✅ SUCCESS! Error logging is working correctly!');
-            console.log('🎉 You can now track all application errors in Supabase.');
+            console.log('🎉 Errors are saved to localStorage and can be exported.');
+            console.log('📥 Run exportErrorLogs() to download all errors as JSON.');
         } else {
-            console.log('⚠️ Test error not found. Check Supabase dashboard manually.');
+            console.log('⚠️ Test error not found. Something went wrong.');
         }
         
         return errors;
