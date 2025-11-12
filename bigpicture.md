@@ -60,3 +60,76 @@ Each role has a unique user interface and set of capabilities tailored to their 
     *   **Approve/Reject/Delete**: The core actions the Agent can take to finalize, cancel, or permanently remove a deal.
     *   **Analytics**: A detailed view with financial analysis (monthly/annual value), risk/priority assessment tools, and compliance checklists.
     *   **Timeline**: A chronological log of every single event and state change that has occurred during the deal's lifecycle.
+
+---
+
+## 4. Expanded Project Overview & Technical Details
+
+- 🎯 **3-Role Job Board Application**: Single-page web app for managing hiring deals between Contractor, Employer, and Agent roles.
+- 🏗️ **Main Entry Point**: `3role_job_board.html` — contains all HTML, CSS, and JavaScript logic. Supabase backend for database, authentication, and real-time updates. State managed via browser `localStorage`.
+- 🧪 **Testing**: Automated Playwright test suite (`test-job-board.js`, `TEST_README.md`, `TEST_SUITE_OVERVIEW.md`). 50+ tests, 100% coverage, visual regression via screenshots.
+
+## 5. Application Workflow
+
+- 🛠️ **Standard Deal Workflow (5 Steps)**:
+  1. Contractor submits demand
+  2. Employer reviews and negotiates
+  3. Chat negotiation
+  4. Employer confirms
+  5. Agent reviews, approves/rejects
+  - Final state: "Deal Manager Processed - Ready for Escrow"
+- 🔀 **Alternative Flows**:
+  - Agent rejection/deletion
+  - Contractor cancellation during cooling-off
+  - Navigation across 10 tabs
+- 🗂️ **Database Schema**:
+  - 5 tables: users, deals, messages, activities, agent_actions
+  - Row Level Security (RLS) and role-based access control
+  - Realtime subscriptions and audit trail
+
+## 6. Role Details (with File References)
+
+### 👤 Contractor (Job Seeker)
+- Features:
+  - Submit job demand (rate, options, hours, days)
+  - View and track deal status
+  - Accept/deny deal during cooling-off
+  - Chat with employer
+- Permissions:
+  - Can initiate deals, negotiate, and accept/deny offers
+- Management:
+  - UI: `#contractor-app` in `3role_job_board.html`
+  - Logic: Demand submission, status updates, chat integration
+
+### 🏢 Employer (Hiring Manager)
+- Features:
+  - Review contractor demands
+  - Start chat negotiation
+  - Confirm and submit deals
+- Permissions:
+  - Can review, negotiate, and finalize deals
+- Management:
+  - UI: `#employer-app` in `3role_job_board.html`
+  - Logic: Review/confirm workflow, chat, deal management
+
+### 🎯 Agent (Deal Manager & Facilitator)
+- Features:
+  - Dashboard with metrics
+  - Analytics (risk, priority, compliance)
+  - Timeline view, review console
+  - Approve/reject/delete deals
+- Permissions:
+  - Can monitor, approve/reject, and permanently delete deals
+- Management:
+  - UI: `#agent-app` in `3role_job_board.html`
+  - Logic: Approval workflow, analytics, audit trail
+
+## 7. File References
+- Main app: `3role_job_board.html`
+- Tests: `test-job-board.js`, `TEST_README.md`, `TEST_SUITE_OVERVIEW.md`
+- Database: `supabase-schema.sql`, `supabase/config.toml`, migrations
+- Documentation: `README.md`, `bigpicture.md`, `SCREENSHOT_MAP.md`
+
+---
+
+✅ Documentation expanded and context preserved. Latest update: November 12, 2025.
