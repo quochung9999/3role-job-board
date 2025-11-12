@@ -3341,26 +3341,24 @@
         }
         
         try {
-            // Reset global state to initial
-            globalSharedState = {
-                deal: {
-                    id: null,
-                    status: 'Awaiting Initial Demand',
-                    rate: null,
-                    workHours: null,
-                    workDays: null,
-                    option: null,
-                    agentNotes: '',
-                    riskLevel: 'low',
-                    priority: 'normal',
-                    estimatedValue: 0,
-                    complianceChecked: false,
-                    backgroundCheckStatus: 'pending'
-                },
-                negotiationChat: [],
-                activities: [],
-                agentActions: []
-            };
+            // Reset global state properties (can't reassign const)
+            globalSharedState.deal.id = null;
+            globalSharedState.deal.status = 'Awaiting Initial Demand';
+            globalSharedState.deal.rate = null;
+            globalSharedState.deal.workHours = null;
+            globalSharedState.deal.workDays = null;
+            globalSharedState.deal.option = null;
+            globalSharedState.deal.agentNotes = '';
+            globalSharedState.deal.riskLevel = 'low';
+            globalSharedState.deal.priority = 'normal';
+            globalSharedState.deal.estimatedValue = 0;
+            globalSharedState.deal.complianceChecked = false;
+            globalSharedState.deal.backgroundCheckStatus = 'pending';
+            
+            // Clear arrays
+            globalSharedState.negotiationChat.length = 0;
+            globalSharedState.activities.length = 0;
+            globalSharedState.agentActions.length = 0;
             
             // Clear current deal ID
             currentDealId = null;
