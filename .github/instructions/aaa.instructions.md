@@ -1,1 +1,13 @@
-whenever you see kkkk please firstly show me 1/ summary what we done 2/ suggest me 5 next things to do on the chat window. only when you completely shown me the content on the copilot chat box then  you update to file whatwedone.md and 5thingwilldo.md accordingly.
+When the message contains "kkkk":
+1. Summarize previous completed actions or tasks in a clear bullet-point list, shown first in the chat window.
+2. Suggest 5 logical next steps based on current context and recent work, displaying them in the chat window.
+3. After displaying both the summary and suggestions:
+   - Write/update whatwedone.md with the summary.
+   - Write/update 5thingwilldo.md with the list of 5 suggested next steps.
+
+When the message contains "gggg":
+1. In the project directory, run:
+   - git add .
+   - git commit -m "Automatic progress commit"
+   - git push
+2. Afterward, confirm completion and show a success message in the chat window.

@@ -682,6 +682,179 @@
         🔄
     </button>
 
+    <!-- View Logs Button (Floating) -->
+    <button 
+        id="view-logs-button" 
+        onclick="openErrorDashboard()" 
+        style="position: fixed; top: 10px; right: 130px; z-index: 1000; background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: all 0.3s ease; display: flex; align-items: center; justify-content: center;"
+        onmouseover="this.style.transform='scale(1.1)'; this.style.boxShadow='0 6px 20px rgba(0,0,0,0.4)';"
+        onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.3)';"
+        title="View Error Logs & Dashboard"
+    >
+        🐛
+    </button>
+
+    <!-- Error Dashboard Modal -->
+    <div id="error-dashboard-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-[2000] flex items-center justify-center p-4" onclick="if(event.target.id==='error-dashboard-modal') closeErrorDashboard()">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col" onclick="event.stopPropagation()">
+            <!-- Dashboard Header -->
+            <div class="bg-gradient-to-r from-red-600 to-orange-600 text-white px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl">🐛</span>
+                    <div>
+                        <h2 class="text-2xl font-bold">Error Dashboard</h2>
+                        <p class="text-sm opacity-90">Monitor and analyze application errors</p>
+                    </div>
+                </div>
+                <button onclick="closeErrorDashboard()" class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition-all">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Dashboard Content -->
+            <div class="flex-1 overflow-y-auto p-6">
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-3 gap-4 mb-6">
+                    <!-- Total Errors Today -->
+                    <div class="bg-gradient-to-br from-red-50 to-red-100 border-2 border-red-300 rounded-xl p-4 shadow-md">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-red-600 font-semibold text-sm">🔴 Errors Today</span>
+                        </div>
+                        <div class="text-3xl font-bold text-red-700" id="errors-today-count">0</div>
+                        <div class="text-xs text-red-600 mt-1" id="errors-trend">No change from yesterday</div>
+                    </div>
+
+                    <!-- Error Types -->
+                    <div class="bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-orange-300 rounded-xl p-4 shadow-md">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-orange-600 font-semibold text-sm">📊 Error Types</span>
+                        </div>
+                        <div id="error-types-list" class="text-sm space-y-1">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">database:</span>
+                                <span class="font-bold text-orange-700">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Unresolved Errors -->
+                    <div class="bg-gradient-to-br from-yellow-50 to-yellow-100 border-2 border-yellow-300 rounded-xl p-4 shadow-md">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-yellow-700 font-semibold text-sm">⚠️ Unresolved</span>
+                        </div>
+                        <div class="text-3xl font-bold text-yellow-700" id="unresolved-count">0</div>
+                        <div class="text-xs text-yellow-600 mt-1">Needs attention</div>
+                    </div>
+                </div>
+
+                <!-- Error Trend Chart (Simple ASCII Chart) -->
+                <div class="bg-gray-50 border-2 border-gray-200 rounded-xl p-4 mb-6">
+                    <h3 class="font-bold text-gray-800 mb-3 flex items-center gap-2">
+                        <span>📈</span>
+                        <span>Error Trend (Last 24 Hours)</span>
+                    </h3>
+                    <div id="error-chart" class="font-mono text-xs text-gray-600 overflow-x-auto">
+                        <!-- Chart will be rendered here -->
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="bg-white border-2 border-gray-200 rounded-xl p-4 mb-6">
+                    <h3 class="font-bold text-gray-800 mb-3">🔍 Filter Errors</h3>
+                    <div class="grid grid-cols-4 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 mb-1">Error Type</label>
+                            <select id="filter-error-type" onchange="filterErrors()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                                <option value="">All Types</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 mb-1">User Role</label>
+                            <select id="filter-user-role" onchange="filterErrors()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                                <option value="">All Roles</option>
+                                <option value="contractor">Contractor</option>
+                                <option value="employer">Employer</option>
+                                <option value="agent">Agent</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 mb-1">Status</label>
+                            <select id="filter-status" onchange="filterErrors()" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                                <option value="">All Status</option>
+                                <option value="unresolved">Unresolved</option>
+                                <option value="resolved">Resolved</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 mb-1">Search</label>
+                            <input type="text" id="filter-search" oninput="filterErrors()" placeholder="Search message..." class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error List Table -->
+                <div class="bg-white border-2 border-gray-200 rounded-xl overflow-hidden">
+                    <div class="bg-gray-100 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                        <h3 class="font-bold text-gray-800">📋 Error Log</h3>
+                        <div class="flex gap-2">
+                            <button onclick="refreshErrorDashboard()" class="text-xs bg-blue-500 text-white px-3 py-1 rounded-lg hover:bg-blue-600 transition-colors">
+                                🔄 Refresh
+                            </button>
+                            <button onclick="exportErrorLogsFromDashboard()" class="text-xs bg-green-500 text-white px-3 py-1 rounded-lg hover:bg-green-600 transition-colors">
+                                📥 Export JSON
+                            </button>
+                            <button onclick="clearAllErrors()" class="text-xs bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition-colors">
+                                🗑️ Clear All
+                            </button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto max-h-96">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50 sticky top-0">
+                                <tr>
+                                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-700 border-b">Time</th>
+                                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-700 border-b">Type</th>
+                                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-700 border-b">Message</th>
+                                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-700 border-b">User</th>
+                                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-700 border-b">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="error-table-body">
+                                <!-- Error rows will be rendered here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <div id="error-empty-state" class="hidden text-center py-12">
+                    <span class="text-6xl">✅</span>
+                    <p class="text-xl font-bold text-gray-800 mt-4">No Errors Found!</p>
+                    <p class="text-gray-600 mt-2">Your application is running smoothly.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Detail Modal -->
+    <div id="error-detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-[2001] flex items-center justify-center p-4" onclick="if(event.target.id==='error-detail-modal') closeErrorDetail()">
+        <div class="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[80vh] overflow-hidden" onclick="event.stopPropagation()">
+            <div class="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
+                <h3 class="text-xl font-bold">🔍 Error Details</h3>
+                <button onclick="closeErrorDetail()" class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition-all">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[calc(80vh-80px)]" id="error-detail-content">
+                <!-- Error details will be rendered here -->
+            </div>
+        </div>
+    </div>
+
     <!-- Global Workflow Progress Tracker -->
     <div id="progress-tracker-container" class="progress-tracker" style="position: fixed; top: 0; left: 0; right: 0; z-index: 999; margin: 0; border-radius: 0; border-bottom: 1px solid #e5e7eb; transition: transform 0.3s ease, opacity 0.3s ease;">
         <div class="progress-info">
@@ -881,7 +1054,17 @@
      */
     async function logError(error, errorType = 'unknown', additionalContext = {}) {
         try {
-            const errorMessage = error instanceof Error ? error.message : String(error);
+            // Handle different error types properly
+            let errorMessage;
+            if (error instanceof Error) {
+                errorMessage = error.message;
+            } else if (typeof error === 'object' && error !== null) {
+                // Handle plain objects (e.g., Supabase errors)
+                errorMessage = error.message || error.error || JSON.stringify(error);
+            } else {
+                errorMessage = String(error);
+            }
+            
             const stackTrace = error instanceof Error ? error.stack : null;
             const timestamp = new Date().toISOString();
             
@@ -3154,12 +3337,12 @@
         report += `Status: ${deal.status}\n`;
         report += `Hourly Rate: $${deal.rate || 'N/A'}\n`;
         report += `Service Option: ${deal.option || 'N/A'}\n`;
-        report += `Work Hours: ${deal.workHours}\n`;
-        report += `Work Days: ${deal.workDays}\n`;
-        report += `Risk Level: ${deal.riskLevel.toUpperCase()}\n`;
-        report += `Priority: ${deal.priority.toUpperCase()}\n`;
+        report += `Work Hours: ${deal.workHours || 'N/A'}\n`;
+        report += `Work Days: ${deal.workDays || 'N/A'}\n`;
+        report += `Risk Level: ${deal.riskLevel ? deal.riskLevel.toUpperCase() : 'N/A'}\n`;
+        report += `Priority: ${deal.priority ? deal.priority.toUpperCase() : 'N/A'}\n`;
         report += `Compliance Verified: ${deal.complianceChecked ? 'YES' : 'NO'}\n`;
-        report += `Background Check: ${deal.backgroundCheckStatus.toUpperCase()}\n`;
+        report += `Background Check: ${deal.backgroundCheckStatus ? deal.backgroundCheckStatus.toUpperCase() : 'N/A'}\n`;
 
         
         report += `=== ACTIVITY TIMELINE ===\n`;
@@ -3416,6 +3599,416 @@
             console.error('Error resetting data:', error);
             await logError(error, 'reset_data_error', { operation: 'resetData' });
             alert('❌ Error resetting data. Check console for details.');
+        }
+    }
+
+    // --- Error Dashboard Functions ---
+    
+    /**
+     * Open Error Dashboard Modal
+     */
+    function openErrorDashboard() {
+        const modal = document.getElementById('error-dashboard-modal');
+        modal.classList.remove('hidden');
+        
+        // Load and render dashboard
+        renderErrorDashboard();
+    }
+    
+    /**
+     * Close Error Dashboard Modal
+     */
+    function closeErrorDashboard() {
+        const modal = document.getElementById('error-dashboard-modal');
+        modal.classList.add('hidden');
+    }
+    
+    /**
+     * Render complete error dashboard
+     */
+    function renderErrorDashboard() {
+        const errors = getRecentErrors(200); // Get more for better analysis
+        const summary = getErrorSummary();
+        
+        // Show empty state if no errors
+        if (errors.length === 0) {
+            document.getElementById('error-empty-state').classList.remove('hidden');
+            document.getElementById('error-table-body').innerHTML = '';
+            document.getElementById('errors-today-count').textContent = '0';
+            document.getElementById('unresolved-count').textContent = '0';
+            return;
+        } else {
+            document.getElementById('error-empty-state').classList.add('hidden');
+        }
+        
+        // Update summary cards
+        updateSummaryCards(errors, summary);
+        
+        // Render error trend chart
+        renderErrorChart(errors);
+        
+        // Populate filter dropdowns
+        populateFilterDropdowns(summary);
+        
+        // Render error table
+        renderErrorTable(errors);
+    }
+    
+    /**
+     * Update dashboard summary cards
+     */
+    function updateSummaryCards(errors, summary) {
+        // Errors today
+        const today = new Date().toDateString();
+        const errorsToday = errors.filter(e => new Date(e.timestamp).toDateString() === today);
+        document.getElementById('errors-today-count').textContent = errorsToday.length;
+        
+        // Calculate trend (compare to yesterday)
+        const yesterday = new Date(Date.now() - 86400000).toDateString();
+        const errorsYesterday = errors.filter(e => new Date(e.timestamp).toDateString() === yesterday);
+        const trendPercent = errorsYesterday.length > 0 
+            ? Math.round(((errorsToday.length - errorsYesterday.length) / errorsYesterday.length) * 100)
+            : 0;
+        const trendEl = document.getElementById('errors-trend');
+        if (trendPercent > 0) {
+            trendEl.textContent = `↑ ${trendPercent}% from yesterday`;
+            trendEl.className = 'text-xs text-red-600 mt-1';
+        } else if (trendPercent < 0) {
+            trendEl.textContent = `↓ ${Math.abs(trendPercent)}% from yesterday`;
+            trendEl.className = 'text-xs text-green-600 mt-1';
+        } else {
+            trendEl.textContent = 'No change from yesterday';
+            trendEl.className = 'text-xs text-gray-600 mt-1';
+        }
+        
+        // Error types breakdown
+        const typesContainer = document.getElementById('error-types-list');
+        const topTypes = summary.slice(0, 3);
+        if (topTypes.length > 0) {
+            typesContainer.innerHTML = topTypes.map(type => `
+                <div class="flex justify-between">
+                    <span class="text-gray-600">${type.error_type}:</span>
+                    <span class="font-bold text-orange-700">${type.count}</span>
+                </div>
+            `).join('');
+        } else {
+            typesContainer.innerHTML = '<div class="text-gray-500 text-xs">No errors</div>';
+        }
+        
+        // Unresolved count (errors without 'resolved' flag)
+        const unresolved = errors.filter(e => !e.resolved);
+        document.getElementById('unresolved-count').textContent = unresolved.length;
+    }
+    
+    /**
+     * Render simple ASCII-style error trend chart
+     */
+    function renderErrorChart(errors) {
+        const chartContainer = document.getElementById('error-chart');
+        
+        // Group errors by hour for last 24 hours
+        const now = Date.now();
+        const hours = 24;
+        const hourBuckets = new Array(hours).fill(0);
+        const hourLabels = [];
+        
+        for (let i = hours - 1; i >= 0; i--) {
+            const hourStart = now - (i * 3600000);
+            const hourEnd = hourStart + 3600000;
+            const hourLabel = new Date(hourStart).getHours();
+            hourLabels.push(hourLabel.toString().padStart(2, '0'));
+            
+            hourBuckets[hours - 1 - i] = errors.filter(e => {
+                const errorTime = new Date(e.timestamp).getTime();
+                return errorTime >= hourStart && errorTime < hourEnd;
+            }).length;
+        }
+        
+        // Find max for scaling
+        const maxErrors = Math.max(...hourBuckets, 1);
+        const chartHeight = 10;
+        
+        // Render ASCII chart
+        let chart = '';
+        for (let row = chartHeight; row >= 0; row--) {
+            const threshold = (row / chartHeight) * maxErrors;
+            let line = `${Math.round(threshold).toString().padStart(3, ' ')} │ `;
+            
+            for (let col = 0; col < hourBuckets.length; col++) {
+                if (hourBuckets[col] >= threshold) {
+                    line += '█';
+                } else {
+                    line += ' ';
+                }
+            }
+            chart += line + '\n';
+        }
+        
+        // Add x-axis
+        chart += '    └' + '─'.repeat(hourBuckets.length) + '\n';
+        chart += '     ' + hourLabels.filter((_, i) => i % 4 === 0).map(h => h + 'h').join('   ') + '\n';
+        
+        chartContainer.innerHTML = `<pre>${chart}</pre>`;
+    }
+    
+    /**
+     * Populate filter dropdowns with actual error types
+     */
+    function populateFilterDropdowns(summary) {
+        const typeFilter = document.getElementById('filter-error-type');
+        const currentValue = typeFilter.value;
+        
+        typeFilter.innerHTML = '<option value="">All Types</option>';
+        summary.forEach(type => {
+            const option = document.createElement('option');
+            option.value = type.error_type;
+            option.textContent = `${type.error_type} (${type.count})`;
+            typeFilter.appendChild(option);
+        });
+        
+        typeFilter.value = currentValue;
+    }
+    
+    /**
+     * Render error table with filtering
+     */
+    function renderErrorTable(errors) {
+        const tbody = document.getElementById('error-table-body');
+        
+        if (errors.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-500">No errors match your filters</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = errors.map((error, index) => {
+            const time = new Date(error.timestamp).toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            const typeColor = getErrorTypeColor(error.error_type);
+            const isResolved = error.resolved || false;
+            
+            return `
+                <tr class="border-b hover:bg-gray-50 transition-colors ${isResolved ? 'opacity-50' : ''}">
+                    <td class="px-4 py-3 text-gray-700 whitespace-nowrap">${time}</td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 rounded-full text-xs font-semibold ${typeColor}">
+                            ${error.error_type}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-gray-800 max-w-md truncate" title="${error.error_message}">
+                        ${error.error_message}
+                    </td>
+                    <td class="px-4 py-3 text-gray-600 text-xs">
+                        ${error.user_role ? `<span class="capitalize">${error.user_role}</span>` : 'N/A'}
+                    </td>
+                    <td class="px-4 py-3">
+                        <div class="flex gap-1">
+                            <button onclick="viewErrorDetail(${index})" class="text-blue-600 hover:text-blue-800 text-xs font-semibold" title="View Details">
+                                🔍
+                            </button>
+                            ${!isResolved ? `
+                                <button onclick="markErrorResolved(${index})" class="text-green-600 hover:text-green-800 text-xs font-semibold" title="Mark Resolved">
+                                    ✅
+                                </button>
+                            ` : `
+                                <span class="text-green-600 text-xs">✓ Resolved</span>
+                            `}
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+    
+    /**
+     * Get color class for error type badge
+     */
+    function getErrorTypeColor(type) {
+        const colors = {
+            'database': 'bg-red-100 text-red-800',
+            'network': 'bg-orange-100 text-orange-800',
+            'validation': 'bg-yellow-100 text-yellow-800',
+            'uncaught_exception': 'bg-purple-100 text-purple-800',
+            'unhandled_promise_rejection': 'bg-pink-100 text-pink-800',
+            'test_error': 'bg-blue-100 text-blue-800'
+        };
+        return colors[type] || 'bg-gray-100 text-gray-800';
+    }
+    
+    /**
+     * Filter errors based on current filter settings
+     */
+    function filterErrors() {
+        const allErrors = getRecentErrors(200);
+        const typeFilter = document.getElementById('filter-error-type').value;
+        const roleFilter = document.getElementById('filter-user-role').value;
+        const statusFilter = document.getElementById('filter-status').value;
+        const searchTerm = document.getElementById('filter-search').value.toLowerCase();
+        
+        let filtered = allErrors;
+        
+        // Apply filters
+        if (typeFilter) {
+            filtered = filtered.filter(e => e.error_type === typeFilter);
+        }
+        
+        if (roleFilter) {
+            filtered = filtered.filter(e => e.user_role === roleFilter);
+        }
+        
+        if (statusFilter === 'resolved') {
+            filtered = filtered.filter(e => e.resolved === true);
+        } else if (statusFilter === 'unresolved') {
+            filtered = filtered.filter(e => !e.resolved);
+        }
+        
+        if (searchTerm) {
+            filtered = filtered.filter(e => 
+                e.error_message.toLowerCase().includes(searchTerm) ||
+                (e.error_type && e.error_type.toLowerCase().includes(searchTerm))
+            );
+        }
+        
+        // Re-render table with filtered results
+        renderErrorTable(filtered);
+    }
+    
+    /**
+     * View detailed error information
+     */
+    function viewErrorDetail(index) {
+        const errors = getRecentErrors(200);
+        const error = errors[index];
+        
+        if (!error) return;
+        
+        const detailContent = document.getElementById('error-detail-content');
+        detailContent.innerHTML = `
+            <div class="space-y-4">
+                <div>
+                    <h4 class="font-bold text-gray-700 mb-2">Error Type</h4>
+                    <span class="px-3 py-1 rounded-full text-sm font-semibold ${getErrorTypeColor(error.error_type)}">
+                        ${error.error_type}
+                    </span>
+                </div>
+                
+                <div>
+                    <h4 class="font-bold text-gray-700 mb-2">Error Message</h4>
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">
+                        ${error.error_message}
+                    </div>
+                </div>
+                
+                <div>
+                    <h4 class="font-bold text-gray-700 mb-2">Timestamp</h4>
+                    <p class="text-gray-600">${new Date(error.timestamp).toLocaleString()}</p>
+                </div>
+                
+                ${error.user_role ? `
+                    <div>
+                        <h4 class="font-bold text-gray-700 mb-2">User Context</h4>
+                        <div class="bg-gray-50 rounded-lg p-3 text-sm">
+                            <p><strong>Role:</strong> <span class="capitalize">${error.user_role}</span></p>
+                            ${error.user_id ? `<p><strong>User ID:</strong> ${error.user_id}</p>` : ''}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                ${error.stack_trace ? `
+                    <div>
+                        <h4 class="font-bold text-gray-700 mb-2">Stack Trace</h4>
+                        <div class="bg-gray-900 text-green-400 rounded-lg p-4 overflow-x-auto text-xs font-mono">
+                            <pre>${error.stack_trace}</pre>
+                        </div>
+                    </div>
+                ` : ''}
+                
+                ${error.context ? `
+                    <div>
+                        <h4 class="font-bold text-gray-700 mb-2">Additional Context</h4>
+                        <div class="bg-gray-50 rounded-lg p-3 overflow-x-auto">
+                            <pre class="text-xs">${JSON.stringify(error.context, null, 2)}</pre>
+                        </div>
+                    </div>
+                ` : ''}
+                
+                ${error.url ? `
+                    <div>
+                        <h4 class="font-bold text-gray-700 mb-2">URL</h4>
+                        <p class="text-gray-600 text-sm break-all">${error.url}</p>
+                    </div>
+                ` : ''}
+                
+                <div class="flex gap-3 pt-4 border-t">
+                    <button onclick="markErrorResolved(${index}); closeErrorDetail(); refreshErrorDashboard();" 
+                            class="flex-1 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors">
+                        ✅ Mark as Resolved
+                    </button>
+                    <button onclick="closeErrorDetail()" 
+                            class="flex-1 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors">
+                        Close
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('error-detail-modal').classList.remove('hidden');
+    }
+    
+    /**
+     * Close error detail modal
+     */
+    function closeErrorDetail() {
+        document.getElementById('error-detail-modal').classList.add('hidden');
+    }
+    
+    /**
+     * Mark an error as resolved
+     */
+    function markErrorResolved(index) {
+        try {
+            const errors = JSON.parse(localStorage.getItem('error_logs') || '[]');
+            if (errors[index]) {
+                errors[index].resolved = true;
+                errors[index].resolved_at = new Date().toISOString();
+                localStorage.setItem('error_logs', JSON.stringify(errors));
+                
+                console.log(`✅ Error marked as resolved:`, errors[index].error_message);
+                refreshErrorDashboard();
+            }
+        } catch (err) {
+            console.error('Error marking error as resolved:', err);
+        }
+    }
+    
+    /**
+     * Refresh the error dashboard
+     */
+    function refreshErrorDashboard() {
+        renderErrorDashboard();
+        console.log('🔄 Error dashboard refreshed');
+    }
+    
+    /**
+     * Export errors from dashboard UI
+     */
+    function exportErrorLogsFromDashboard() {
+        const count = exportErrorLogs();
+        alert(`✅ Exported ${count} error logs to JSON file`);
+    }
+    
+    /**
+     * Clear all errors with confirmation
+     */
+    function clearAllErrors() {
+        if (confirm('⚠️ Are you sure you want to clear ALL error logs? This cannot be undone.')) {
+            const count = clearErrorLogs();
+            refreshErrorDashboard();
+            alert(`✅ Cleared ${count} error logs`);
         }
     }
 
