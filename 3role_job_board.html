@@ -803,6 +803,11 @@
             </button>
         </div>
         
+        <!-- Deal Selector for Employer (Multiple Contractors) -->
+        <div id="employer-deal-selector" class="px-4 pt-2">
+            <!-- Will be populated when employer logs in -->
+        </div>
+        
         <div class="workflow-controls">
             <button class="workflow-btn" onclick="simulateWorkflowStep(1)">Step 1</button>
             <button class="workflow-btn" onclick="simulateWorkflowStep(2)">Step 2</button>
@@ -912,18 +917,67 @@
 
     // --- Dummy Users for PoC (Testing Only) ---
     const DUMMY_USERS = {
-        contractor: {
+        // 4 Job Seekers (Contractors)
+        contractor1: {
             id: '550e8400-e29b-41d4-a716-446655440001',
-            name: 'John Contractor',
-            email: 'john.contractor@test.com',
-            role: 'contractor'
+            name: 'John Developer',
+            email: 'john.developer@test.com',
+            role: 'contractor',
+            specialty: 'Full-Stack Developer'
         },
-        employer: {
+        contractor2: {
+            id: '550e8400-e29b-41d4-a716-446655440004',
+            name: 'Sarah Designer',
+            email: 'sarah.designer@test.com',
+            role: 'contractor',
+            specialty: 'UI/UX Designer'
+        },
+        contractor3: {
+            id: '550e8400-e29b-41d4-a716-446655440005',
+            name: 'Mike DataScientist',
+            email: 'mike.data@test.com',
+            role: 'contractor',
+            specialty: 'Data Scientist'
+        },
+        contractor4: {
+            id: '550e8400-e29b-41d4-a716-446655440006',
+            name: 'Lisa Marketing',
+            email: 'lisa.marketing@test.com',
+            role: 'contractor',
+            specialty: 'Marketing Specialist'
+        },
+        
+        // 4 Employers
+        employer1: {
             id: '550e8400-e29b-41d4-a716-446655440002',
-            name: 'Jane Employer',
-            email: 'jane.employer@test.com',
-            role: 'employer'
+            name: 'Jane Tech Corp',
+            email: 'jane.techcorp@test.com',
+            role: 'employer',
+            company: 'Tech Corp Inc.'
         },
+        employer2: {
+            id: '550e8400-e29b-41d4-a716-446655440007',
+            name: 'Bob Startup',
+            email: 'bob.startup@test.com',
+            role: 'employer',
+            company: 'Startup Ventures'
+        },
+        employer3: {
+            id: '550e8400-e29b-41d4-a716-446655440008',
+            name: 'Alice Enterprise',
+            email: 'alice.enterprise@test.com',
+            role: 'employer',
+            company: 'Enterprise Solutions'
+        },
+        employer4: {
+            id: '550e8400-e29b-41d4-a716-446655440009',
+            name: 'Tom Agency',
+            email: 'tom.agency@test.com',
+            role: 'employer',
+            company: 'Creative Agency'
+        },
+        
+        // 1 Agent
         agent: {
             id: '550e8400-e29b-41d4-a716-446655440003',
             name: 'Bob Agent',
@@ -931,6 +985,11 @@
             role: 'agent'
         }
     };
+
+    // Helper to get users by role
+    function getUsersByRole(role) {
+        return Object.values(DUMMY_USERS).filter(user => user.role === role);
+    }
 
     // --- Supabase Database Helper Functions ---
     
@@ -1207,10 +1266,10 @@
     /**
      * Auto-login as dummy user (PoC only)
      */
-    function loginAsUser(role) {
-        const user = DUMMY_USERS[role];
+    async function loginAsUser(userKey) {
+        const user = DUMMY_USERS[userKey];
         if (!user) {
-            console.error('Invalid role:', role);
+            console.error('Invalid user key:', userKey);
             return;
         }
         
@@ -1225,8 +1284,14 @@
         // Update UI to show logged-in user
         updateLoginIndicators();
         
+        // If employer, load their deals
+        if (user.role === 'employer') {
+            await loadEmployerDeals();
+        }
+        
         // Show success message
-        addActivity('System', `${user.name} logged in as ${role}`, 'system');
+        await addActivity('System', `${user.name} logged in`, 'system');
+        renderAllViews();
     }
 
     /**
@@ -1235,9 +1300,11 @@
     function logout() {
         currentUser = null;
         currentUserId = null;
+        currentDealId = null;
         localStorage.removeItem('currentUser');
         updateLoginIndicators();
         console.log('👋 Logged out');
+        renderAllViews();
     }
 
     /**
@@ -1248,28 +1315,49 @@
         
         roles.forEach(role => {
             const indicator = document.getElementById(`login-indicator-${role}`);
-            if (indicator) {
-                if (currentUser && currentUser.role === role) {
-                    indicator.innerHTML = `
-                        <div class="bg-green-100 border border-green-400 rounded-lg p-2 text-sm">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <span class="font-bold text-green-800">✓ ${currentUser.name}</span>
-                                    <span class="text-green-600 text-xs ml-2">(${currentUser.email})</span>
-                                </div>
-                                <button onclick="logout()" class="text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">
-                                    Logout
-                                </button>
+            if (!indicator) return;
+            
+            const usersForRole = getUsersByRole(role);
+            
+            if (currentUser && currentUser.role === role) {
+                // Show logged-in user
+                const extraInfo = currentUser.specialty || currentUser.company || '';
+                indicator.innerHTML = `
+                    <div class="bg-green-100 border border-green-400 rounded-lg p-2 text-sm">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <span class="font-bold text-green-800">✓ ${currentUser.name}</span>
+                                <span class="text-green-600 text-xs ml-2">${extraInfo}</span>
                             </div>
+                            <button onclick="logout()" class="text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">
+                                Logout
+                            </button>
                         </div>
-                    `;
-                } else {
-                    indicator.innerHTML = `
-                        <button onclick="loginAsUser('${role}')" class="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-all">
-                            🔐 Login as ${role.charAt(0).toUpperCase() + role.slice(1)}
-                        </button>
-                    `;
-                }
+                    </div>
+                `;
+            } else if (usersForRole.length > 1) {
+                // Show dropdown for multiple users
+                const userKey = Object.keys(DUMMY_USERS).find(key => DUMMY_USERS[key].role === role);
+                indicator.innerHTML = `
+                    <div class="relative">
+                        <select onchange="loginAsUser(this.value)" class="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-all cursor-pointer">
+                            <option value="">🔐 Select ${role.charAt(0).toUpperCase() + role.slice(1)}</option>
+                            ${usersForRole.map(user => {
+                                const key = Object.keys(DUMMY_USERS).find(k => DUMMY_USERS[k].id === user.id);
+                                const extra = user.specialty || user.company || '';
+                                return `<option value="${key}">${user.name}${extra ? ' - ' + extra : ''}</option>`;
+                            }).join('')}
+                        </select>
+                    </div>
+                `;
+            } else {
+                // Single user - show button
+                const userKey = Object.keys(DUMMY_USERS).find(key => DUMMY_USERS[key].role === role);
+                indicator.innerHTML = `
+                    <button onclick="loginAsUser('${userKey}')" class="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-all">
+                        🔐 Login as ${role.charAt(0).toUpperCase() + role.slice(1)}
+                    </button>
+                `;
             }
         });
     }
@@ -1324,6 +1412,129 @@
             }
         } catch (e) {
             console.warn('Failed to load user from storage:', e);
+        }
+    }
+
+    // --- Multi-Deal Management for Employers ---
+    
+    let availableDeals = [];  // List of deals available to employer
+    
+    /**
+     * Load all deals available to the logged-in employer
+     */
+    async function loadEmployerDeals() {
+        if (!currentUser || currentUser.role !== 'employer') return;
+        
+        try {
+            // Query deals where employer can view
+            const { data, error } = await supabase
+                .from('deals')
+                .select(`
+                    *,
+                    contractor:users!deals_contractor_id_fkey(name, email)
+                `)
+                .or(`employer_id.eq.${currentUserId},status.in.("Demand Submitted - Awaiting Employer Review","Chat Negotiation")`)
+                .order('created_at', { ascending: false });
+            
+            if (error) throw error;
+            
+            availableDeals = data || [];
+            console.log(`✅ Loaded ${availableDeals.length} deals for employer`);
+            
+            // Render deal selector
+            renderDealSelector();
+            
+            return availableDeals;
+        } catch (error) {
+            console.error('❌ Error loading employer deals:', error);
+            return [];
+        }
+    }
+    
+    /**
+     * Render deal selector dropdown for employer
+     */
+    function renderDealSelector() {
+        const selector = document.getElementById('employer-deal-selector');
+        if (!selector || !currentUser || currentUser.role !== 'employer') return;
+        
+        if (availableDeals.length === 0) {
+            selector.innerHTML = `
+                <div class="bg-gray-100 border border-gray-300 rounded-lg p-3 text-sm text-gray-600">
+                    No active deals available. Waiting for contractors to submit demands...
+                </div>
+            `;
+            return;
+        }
+        
+        selector.innerHTML = `
+            <div class="bg-white border border-gray-300 rounded-lg p-2">
+                <label class="block text-xs font-bold text-gray-700 mb-1">Active Deals (${availableDeals.length})</label>
+                <select onchange="switchToEmployerDeal(this.value)" class="w-full border border-gray-300 rounded px-3 py-2 text-sm">
+                    <option value="">Select a deal to view...</option>
+                    ${availableDeals.map(deal => {
+                        const contractorName = deal.contractor?.name || 'Unknown';
+                        const isActive = deal.id === currentDealId ? 'selected' : '';
+                        return `
+                            <option value="${deal.id}" ${isActive}>
+                                ${contractorName} - $${deal.rate}/hr - ${deal.status}
+                            </option>
+                        `;
+                    }).join('')}
+                </select>
+                ${currentDealId ? `<p class="text-xs text-gray-500 mt-1">Currently viewing deal with ${availableDeals.find(d => d.id === currentDealId)?.contractor?.name || 'contractor'}</p>` : ''}
+            </div>
+        `;
+    }
+    
+    /**
+     * Switch to viewing a different deal
+     */
+    async function switchToEmployerDeal(dealId) {
+        if (!dealId) return;
+        
+        try {
+            // Load the selected deal
+            const dealData = await loadDealFromDB(dealId);
+            if (!dealData) {
+                alert('Failed to load deal');
+                return;
+            }
+            
+            // Update global state
+            Object.assign(globalSharedState.deal, dealData);
+            currentDealId = dealId;
+            
+            // Load messages for this deal
+            const messages = await loadMessagesFromDB(dealId);
+            globalSharedState.negotiationChat = messages.map(msg => ({
+                sender: msg.sender_role === 'contractor' ? 'Contractor' : 'Employer',
+                message: msg.message,
+                timestamp: new Date(msg.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+                type: msg.sender_role
+            }));
+            
+            // Load activities
+            const activities = await loadActivitiesFromDB(dealId);
+            globalSharedState.activityFeed = activities.map(act => ({
+                sender: act.sender,
+                message: act.message,
+                type: act.activity_type,
+                timestamp: new Date(act.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+                id: act.id
+            }));
+            
+            console.log(`✅ Switched to deal: ${dealId}`);
+            
+            // Update UI
+            renderDealSelector();
+            renderAllViews();
+            updateProgressTracker();
+            renderActivityFeed();
+            
+        } catch (error) {
+            console.error('❌ Error switching deal:', error);
+            alert('Failed to load deal details');
         }
     }
 
@@ -2952,6 +3163,11 @@
         // Ensure dummy users exist in database
         await ensureDummyUsersExist();
         
+        // If employer is logged in, load their deals
+        if (currentUser && currentUser.role === 'employer') {
+            await loadEmployerDeals();
+        }
+        
         // Load app state
         loadFromLocalStorage();
         renderActivityFeed();
@@ -2963,7 +3179,8 @@
         
         await addActivity('System', 'Enhanced platform with chat loaded successfully!', 'system');
         
-        console.log('🎯 PoC Ready! Click "Login" buttons to test each role.');
+        console.log('🎯 PoC Ready! Select users from dropdown to test each role.');
+        console.log(`📊 Available: ${getUsersByRole('contractor').length} contractors, ${getUsersByRole('employer').length} employers`);
     };
 </script>
 
