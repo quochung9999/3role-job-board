@@ -6,6 +6,9 @@
     <title>Ready To Work: Enhanced Three-Role PoC with Chat</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
+    
+    <!-- Supabase Client Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --color-contractor: #00BCD4; /* Aqua Blue */
@@ -874,6 +877,286 @@
         Agent: { id: 'agent', color: 'var(--color-agent)', hex: '#E91E63', text: 'pink-600' }
     };
 
+    // --- Supabase Configuration ---
+    const SUPABASE_URL = 'https://eksufbewfgepqklfetoc.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVrc3VmYmV3ZmdlcHFrbGZldG9jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzE0NzY3MzksImV4cCI6MjA0NzA1MjczOX0.RKJ-QGuhKN-CRDg1pSwNKfBphFKNipCKwQsX3GogIzo';
+    
+    // Initialize Supabase client
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    console.log('✅ Supabase client initialized:', SUPABASE_URL);
+
+    // --- Supabase Database Helper Functions ---
+    
+    // Current deal ID (will be set when deal is created/loaded)
+    let currentDealId = null;
+    let currentUserId = null;  // Will be set when we add auth
+    
+    /**
+     * Create a new deal in the database
+     */
+    async function createDealInDB(dealData) {
+        try {
+            const { data, error } = await supabase
+                .from('deals')
+                .insert([{
+                    contractor_id: currentUserId,  // Will use auth user ID later
+                    employer_id: null,  // Set when employer accepts
+                    rate: dealData.rate,
+                    work_hours: dealData.workHours,
+                    work_days: dealData.workDays,
+                    service_option: dealData.option,
+                    status: dealData.status,
+                    agent_notes: dealData.agentNotes || '',
+                    risk_level: dealData.riskLevel || 'low',
+                    priority: dealData.priority || 'normal',
+                    estimated_value: dealData.estimatedValue || 0,
+                    compliance_checked: dealData.complianceChecked || false,
+                    background_check_status: dealData.backgroundCheckStatus || 'pending'
+                }])
+                .select()
+                .single();
+            
+            if (error) throw error;
+            
+            currentDealId = data.id;
+            console.log('✅ Deal created in database:', data);
+            return data;
+        } catch (error) {
+            console.error('❌ Error creating deal:', error);
+            alert('Failed to create deal in database. Using local storage as fallback.');
+            return null;
+        }
+    }
+    
+    /**
+     * Update existing deal in the database
+     */
+    async function updateDealInDB(dealData) {
+        if (!currentDealId) {
+            console.warn('⚠️ No current deal ID, creating new deal instead');
+            return await createDealInDB(dealData);
+        }
+        
+        try {
+            const { data, error } = await supabase
+                .from('deals')
+                .update({
+                    rate: dealData.rate,
+                    work_hours: dealData.workHours,
+                    work_days: dealData.workDays,
+                    service_option: dealData.option,
+                    status: dealData.status,
+                    agent_notes: dealData.agentNotes || '',
+                    risk_level: dealData.riskLevel || 'low',
+                    priority: dealData.priority || 'normal',
+                    estimated_value: dealData.estimatedValue || 0,
+                    compliance_checked: dealData.complianceChecked || false,
+                    background_check_status: dealData.backgroundCheckStatus || 'pending'
+                })
+                .eq('id', currentDealId)
+                .select()
+                .single();
+            
+            if (error) throw error;
+            
+            console.log('✅ Deal updated in database:', data);
+            return data;
+        } catch (error) {
+            console.error('❌ Error updating deal:', error);
+            alert('Failed to update deal in database. Changes saved locally only.');
+            return null;
+        }
+    }
+    
+    /**
+     * Load deal from database
+     */
+    async function loadDealFromDB(dealId) {
+        try {
+            const { data, error } = await supabase
+                .from('deals')
+                .select('*')
+                .eq('id', dealId)
+                .single();
+            
+            if (error) throw error;
+            
+            currentDealId = data.id;
+            console.log('✅ Deal loaded from database:', data);
+            
+            // Map database fields to globalSharedState structure
+            return {
+                rate: data.rate,
+                option: data.service_option,
+                workHours: data.work_hours,
+                workDays: data.work_days,
+                status: data.status,
+                agentNotes: data.agent_notes,
+                riskLevel: data.risk_level,
+                priority: data.priority,
+                estimatedValue: data.estimated_value,
+                complianceChecked: data.compliance_checked,
+                backgroundCheckStatus: data.background_check_status
+            };
+        } catch (error) {
+            console.error('❌ Error loading deal:', error);
+            return null;
+        }
+    }
+    
+    /**
+     * Delete deal from database
+     */
+    async function deleteDealFromDB(dealId) {
+        try {
+            const { error } = await supabase
+                .from('deals')
+                .delete()
+                .eq('id', dealId || currentDealId);
+            
+            if (error) throw error;
+            
+            currentDealId = null;
+            console.log('✅ Deal deleted from database');
+            return true;
+        } catch (error) {
+            console.error('❌ Error deleting deal:', error);
+            return false;
+        }
+    }
+    
+    /**
+     * Save message to database
+     */
+    async function saveMessageToDB(message, sender, senderRole) {
+        if (!currentDealId) {
+            console.warn('⚠️ No current deal, cannot save message');
+            return null;
+        }
+        
+        try {
+            const { data, error } = await supabase
+                .from('messages')
+                .insert([{
+                    deal_id: currentDealId,
+                    sender_id: currentUserId,
+                    sender_role: senderRole.toLowerCase(),
+                    message: message
+                }])
+                .select()
+                .single();
+            
+            if (error) throw error;
+            
+            console.log('✅ Message saved to database:', data);
+            return data;
+        } catch (error) {
+            console.error('❌ Error saving message:', error);
+            return null;
+        }
+    }
+    
+    /**
+     * Load messages from database
+     */
+    async function loadMessagesFromDB(dealId) {
+        try {
+            const { data, error } = await supabase
+                .from('messages')
+                .select('*')
+                .eq('deal_id', dealId || currentDealId)
+                .order('created_at', { ascending: true });
+            
+            if (error) throw error;
+            
+            console.log(`✅ Loaded ${data.length} messages from database`);
+            return data;
+        } catch (error) {
+            console.error('❌ Error loading messages:', error);
+            return [];
+        }
+    }
+    
+    /**
+     * Save activity to database
+     */
+    async function saveActivityToDB(sender, message, activityType) {
+        if (!currentDealId) return null;
+        
+        try {
+            const { data, error } = await supabase
+                .from('activities')
+                .insert([{
+                    deal_id: currentDealId,
+                    user_id: currentUserId,
+                    sender: sender,
+                    message: message,
+                    activity_type: activityType.toLowerCase()
+                }])
+                .select()
+                .single();
+            
+            if (error) throw error;
+            
+            console.log('✅ Activity saved to database:', data);
+            return data;
+        } catch (error) {
+            console.error('❌ Error saving activity:', error);
+            return null;
+        }
+    }
+    
+    /**
+     * Load activities from database
+     */
+    async function loadActivitiesFromDB(dealId) {
+        try {
+            const { data, error } = await supabase
+                .from('activities')
+                .select('*')
+                .eq('deal_id', dealId || currentDealId)
+                .order('created_at', { ascending: false })
+                .limit(20);
+            
+            if (error) throw error;
+            
+            console.log(`✅ Loaded ${data.length} activities from database`);
+            return data;
+        } catch (error) {
+            console.error('❌ Error loading activities:', error);
+            return [];
+        }
+    }
+    
+    /**
+     * Log agent action to database
+     */
+    async function logAgentActionToDB(actionType, description) {
+        if (!currentDealId || !currentUserId) return null;
+        
+        try {
+            const { data, error } = await supabase
+                .from('agent_actions')
+                .insert([{
+                    deal_id: currentDealId,
+                    agent_id: currentUserId,
+                    action_type: actionType,
+                    description: description
+                }])
+                .select()
+                .single();
+            
+            if (error) throw error;
+            
+            console.log('✅ Agent action logged to database:', data);
+            return data;
+        } catch (error) {
+            console.error('❌ Error logging agent action:', error);
+            return null;
+        }
+    }
+
     // --- Global Shared State (Enhanced with Chat & Deal Terms) ---
     const globalSharedState = {
         deal: {
@@ -916,10 +1199,15 @@
     let currentChatSender = 'Contractor'; // Track who is typing
 
     // --- Local Storage Management ---
-    function saveToLocalStorage() {
+    async function saveToLocalStorage() {
         try {
             localStorage.setItem('enhancedDealStateWithChat', JSON.stringify(globalSharedState));
             globalSharedState.lastSaved = new Date().toISOString();
+            
+            // Also save deal to database if it exists
+            if (currentDealId) {
+                await updateDealInDB(globalSharedState.deal);
+            }
         } catch (e) {
             console.warn('LocalStorage not available:', e);
         }
@@ -940,7 +1228,7 @@
     }
 
     // --- Activity Feed Management ---
-    function addActivity(sender, message, type = 'system') {
+    async function addActivity(sender, message, type = 'system') {
         const activity = {
             sender,
             message,
@@ -960,7 +1248,11 @@
         }
 
         renderActivityFeed();
-        saveToLocalStorage();
+        await saveToLocalStorage();
+        
+        // Also save to database
+        await saveActivityToDB(sender, message, type);
+        
         showToast(sender, message, type);
         updateProgressTracker();
     }
@@ -1146,7 +1438,7 @@
 
 
     // --- Chat Functions (FIXED) ---
-    function sendMessage(role, message) {
+    async function sendMessage(role, message) {
         if (!message.trim()) return;
 
         const chatMessage = {
@@ -1161,6 +1453,10 @@
 
         globalSharedState.negotiationChat.push(chatMessage);
         
+        // Save message to database
+        const senderRole = role === 'Contractor' ? 'contractor' : 'employer';
+        await saveMessageToDB(message.trim(), role, senderRole);
+        
         // Auto-scroll to bottom
         setTimeout(() => {
             const chatContainer = document.querySelector('.chat-messages');
@@ -1169,7 +1465,7 @@
             }
         }, 100);
 
-        addActivity(role, `Sent message: "${message.trim()}"`, role.toLowerCase());
+        await addActivity(role, `Sent message: "${message.trim()}"`, role.toLowerCase());
         renderAllViews();
     }
 
@@ -2062,7 +2358,7 @@
     // --- Business Logic Functions (Enhanced) ---
 
     /** Contractor submits their initial proposed rate and option. */
-    function submitInitialDemand() {
+    async function submitInitialDemand() {
         const rateEl = document.getElementById('demand-rate');
         const optionEl = document.getElementById('demand-option');
         const hoursEl = document.getElementById('work-hours');
@@ -2092,6 +2388,9 @@
         globalSharedState.deal.workHours = workHours;
         globalSharedState.deal.workDays = workDays;
         globalSharedState.deal.status = 'Demand Submitted - Awaiting Employer Review';
+        
+        // Save to database
+        await createDealInDB(globalSharedState.deal);
         
         addActivity('Contractor', `Demand submitted: $${rate}/hr, ${workHours}, ${workDays}`, 'contractor');
 
@@ -2184,8 +2483,11 @@
         }
     }
 
-    function confirmAndSubmitToAgent() {
+    async function confirmAndSubmitToAgent() {
         globalSharedState.deal.status = 'Pending Agent Review';
+        
+        // Update in database
+        await updateDealInDB(globalSharedState.deal);
         
         // Add system message
         globalSharedState.negotiationChat.push({
@@ -2195,7 +2497,7 @@
             type: 'system'
         });
 
-        addActivity('Employer', 'Confirmed deal and submitted to agent for approval', 'employer');
+        await addActivity('Employer', 'Confirmed deal and submitted to agent for approval', 'employer');
 
         alert('Deal submitted to agent! They will review the chat history and terms.');
         
@@ -2253,7 +2555,7 @@
     }
 
     /** Log agent-specific actions */
-    function logAgentAction(action, note = '') {
+    async function logAgentAction(action, note = '') {
         const agentAction = {
             action,
             note,
@@ -2271,7 +2573,10 @@
             globalSharedState.agentActions = globalSharedState.agentActions.slice(0, 50);
         }
         
-        saveToLocalStorage();
+        // Save to database
+        await logAgentActionToDB(action, note);
+        
+        await saveToLocalStorage();
     }
 
     /** Export timeline as text report */
@@ -2373,7 +2678,7 @@
     }
     
     /** Agent approves the deal */
-    function approveDeal() {
+    async function approveDeal() {
         if (globalSharedState.deal.status !== 'Pending Agent Review') {
             alert('Action Blocked: Deal is not ready for agent review.');
             return;
@@ -2382,8 +2687,11 @@
         if (confirm('Approve this deal and finalize the contract? This will complete the hiring process.')) {
             globalSharedState.deal.status = 'Deal Manager Processed - Ready for Escrow';
 
-            logAgentAction('Deal Approved', 'Deal approved and finalized');
-            addActivity('Agent', 'Deal APPROVED. Status: Ready for Escrow', 'agent');
+            // Update in database
+            await updateDealInDB(globalSharedState.deal);
+            
+            await logAgentAction('Deal Approved', 'Deal approved and finalized');
+            await addActivity('Agent', 'Deal APPROVED. Status: Ready for Escrow', 'agent');
 
             alert('Deal Approved! Status updated to "Ready for Escrow." Hiring process can now begin.');
 
@@ -2396,7 +2704,7 @@
     }
 
     /** Agent rejects the deal */
-    function rejectDeal() {
+    async function rejectDeal() {
         if (globalSharedState.deal.status !== 'Pending Agent Review') {
             alert('Action Blocked: Deal is not ready for agent review.');
             return;
@@ -2407,8 +2715,11 @@
             globalSharedState.deal.rate = null; 
             globalSharedState.deal.option = null; 
 
-            logAgentAction('Deal Rejected', 'Deal rejected - requires new contractor demand');
-            addActivity('Agent', 'Deal REJECTED. Contractor must submit a new demand', 'agent');
+            // Update in database
+            await updateDealInDB(globalSharedState.deal);
+            
+            await logAgentAction('Deal Rejected', 'Deal rejected - requires new contractor demand');
+            await addActivity('Agent', 'Deal REJECTED. Contractor must submit a new demand', 'agent');
 
             alert('Deal Rejected. Contractor can submit a new demand.');
 
@@ -2421,7 +2732,7 @@
     }
 
     /** Agent permanently deletes the deal */
-    function deleteDeal() {
+    async function deleteDeal() {
         const isAwaitingDemand = globalSharedState.deal.status.includes('Awaiting Initial Demand') || globalSharedState.deal.status.includes('New Demand Available');
 
         if (isAwaitingDemand) {
@@ -2436,8 +2747,11 @@
             globalSharedState.deal.rate = null; 
             globalSharedState.deal.option = null; 
 
-            logAgentAction('Deal Deleted', 'Deal permanently deleted - full reset initiated');
-            addActivity('Agent', 'Deal PERMANENTLY DELETED. Contractor must submit a new demand', 'agent');
+            // Delete from database
+            await deleteDealFromDB(currentDealId);
+            
+            await logAgentAction('Deal Deleted', 'Deal permanently deleted - full reset initiated');
+            await addActivity('Agent', 'Deal PERMANENTLY DELETED. Contractor must submit a new demand', 'agent');
 
             alert('Deal Permanently Deleted. Contractor can submit a new demand.');
             
