@@ -564,6 +564,44 @@
         .message.employer .message-time {
             text-align: right;
         }
+        
+        /* ENHANCED CHAT STYLES */
+        .typing-dots {
+            display: inline-flex;
+            gap: 0.25rem;
+            align-items: center;
+        }
+        .typing-dots .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #6b7280;
+            animation: typingBounce 1.4s infinite;
+        }
+        .typing-dots .dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        .typing-dots .dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        @keyframes typingBounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-8px); }
+        }
+        
+        .reaction-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .add-reaction-btn:hover {
+            background: #e5e7eb;
+            border-color: #9ca3af;
+        }
+        
+        .message.own-message {
+            justify-content: flex-end;
+        }
 
         /* DEAL TERMS STYLES */
         .deal-terms-grid {
@@ -1926,6 +1964,14 @@
 
     let currentChatSender = 'Contractor'; // Track who is typing
 
+    // --- Enhanced Chat System State ---
+    let typingIndicators = {}; // { userId: { role: 'Contractor', timeout: timeoutId } }
+    let messageReactions = {}; // { messageId: { '👍': ['user1', 'user2'], '❤️': ['user3'] } }
+    let readReceipts = {}; // { messageId: { userId: timestamp } }
+    let unreadCounts = { Contractor: 0, Employer: 0, Agent: 0 };
+    let typingTimeouts = {};
+    let messageEditHistory = {}; // { messageId: { editedAt: timestamp, originalMessage: '' } }
+
     // --- Local Storage Management ---
     async function saveToLocalStorage() {
         try {
@@ -2182,80 +2228,505 @@
         }
     }
 
-    // --- Chat Functions (FIXED) ---
+    // --- Chat Functions (ENHANCED) ---
+    
+    /**
+     * Show typing indicator for a user
+     */
+    function showTypingIndicator(role) {
+        const userId = currentUser ? currentUser.id : role;
+        
+        // Clear existing timeout
+        if (typingTimeouts[userId]) {
+            clearTimeout(typingTimeouts[userId]);
+        }
+        
+        // Set typing indicator
+        typingIndicators[userId] = {
+            role: role,
+            name: currentUser ? currentUser.name : role,
+            timestamp: Date.now()
+        };
+        
+        // Auto-clear after 3 seconds
+        typingTimeouts[userId] = setTimeout(() => {
+            delete typingIndicators[userId];
+            delete typingTimeouts[userId];
+            updateChatTypingIndicators();
+        }, 3000);
+        
+        updateChatTypingIndicators();
+    }
+    
+    /**
+     * Hide typing indicator for a user
+     */
+    function hideTypingIndicator(role) {
+        const userId = currentUser ? currentUser.id : role;
+        
+        if (typingTimeouts[userId]) {
+            clearTimeout(typingTimeouts[userId]);
+            delete typingTimeouts[userId];
+        }
+        
+        delete typingIndicators[userId];
+        updateChatTypingIndicators();
+    }
+    
+    /**
+     * Update typing indicators in all chat views
+     */
+    function updateChatTypingIndicators() {
+        ['contractor', 'employer', 'agent'].forEach(roleKey => {
+            const container = document.getElementById(`typing-indicator-${roleKey}`);
+            if (!container) return;
+            
+            const typingUsers = Object.values(typingIndicators)
+                .filter(ind => ind.role !== roleKey.charAt(0).toUpperCase() + roleKey.slice(1))
+                .map(ind => ind.name);
+            
+            if (typingUsers.length > 0) {
+                const names = typingUsers.join(', ');
+                container.innerHTML = `
+                    <div class="flex items-center gap-2 text-sm text-gray-600 italic animate-pulse">
+                        <span class="typing-dots">
+                            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                        </span>
+                        <span>${names} ${typingUsers.length === 1 ? 'is' : 'are'} typing...</span>
+                    </div>
+                `;
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
+        });
+    }
+    
     async function sendMessage(role, message) {
         if (!message.trim()) return;
 
+        const messageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const now = new Date();
+        
+        // Parse rich text formatting (simple markdown-style)
+        const formattedMessage = formatRichText(message.trim());
+
         const chatMessage = {
-            sender: role,
+            id: messageId,
+            sender: currentUser ? currentUser.name : role,
+            senderRole: role,
+            senderId: currentUser ? currentUser.id : role,
             message: message.trim(),
-            timestamp: new Date().toLocaleTimeString('en-US', { 
+            formattedMessage: formattedMessage,
+            timestamp: now.toLocaleTimeString('en-US', { 
                 hour: '2-digit', 
                 minute: '2-digit' 
             }),
-            type: role.toLowerCase()
+            fullTimestamp: now.toISOString(),
+            type: role.toLowerCase(),
+            reactions: {},  // { '👍': ['user1', 'user2'] }
+            readBy: [currentUser ? currentUser.id : role],  // Creator has read it
+            edited: false,
+            editedAt: null
         };
 
         globalSharedState.negotiationChat.push(chatMessage);
         
-        // Save message to database
-        const senderRole = role === 'Contractor' ? 'contractor' : 'employer';
-        await saveMessageToDB(message.trim(), role, senderRole);
+        // Hide typing indicator for sender
+        hideTypingIndicator(role);
         
-        // Auto-scroll to bottom
-        setTimeout(() => {
-            const chatContainer = document.querySelector('.chat-messages');
-            if (chatContainer) {
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-            }
-        }, 100);
-
-        await addActivity(role, `Sent message: "${message.trim()}"`, role.toLowerCase());
+        // Mark as unread for other roles
+        incrementUnreadCount(role);
+        
+        // Save message to database
+        await saveMessageToDB(chatMessage.message, chatMessage.sender, chatMessage.senderRole);
+        
+        // Save state
+        await saveToLocalStorage();
+        
+        // Re-render all views to show new message
         renderAllViews();
+        
+        // Scroll to bottom of chat
+        setTimeout(() => scrollChatToBottom(role), 100);
+    }
+    
+    /**
+     * Format rich text (simple markdown-style)
+     * **bold** → <strong>bold</strong>
+     * *italic* → <em>italic</em>
+     * `code` → <code>code</code>
+     */
+    function formatRichText(text) {
+        let formatted = text;
+        
+        // Bold: **text**
+        formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        
+        // Italic: *text*
+        formatted = formatted.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+        
+        // Inline code: `code`
+        formatted = formatted.replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-1 rounded">$1</code>');
+        
+        // Code blocks: ```code```
+        formatted = formatted.replace(/```([^`]+)```/g, '<pre class="bg-gray-900 text-green-400 p-2 rounded mt-1"><code>$1</code></pre>');
+        
+        return formatted;
+    }
+    
+    /**
+     * Increment unread count for roles other than sender
+     */
+    function incrementUnreadCount(senderRole) {
+        const roles = ['Contractor', 'Employer', 'Agent'];
+        roles.forEach(role => {
+            if (role !== senderRole) {
+                unreadCounts[role]++;
+                updateUnreadBadges();
+            }
+        });
+    }
+    
+    /**
+     * Mark all messages as read for a role
+     */
+    function markMessagesAsRead(role) {
+        const userId = currentUser ? currentUser.id : role;
+        const messages = globalSharedState.negotiationChat;
+        
+        messages.forEach(msg => {
+            if (msg.readBy && !msg.readBy.includes(userId)) {
+                msg.readBy.push(userId);
+                
+                // Add read receipt with timestamp
+                if (!readReceipts[msg.id]) {
+                    readReceipts[msg.id] = {};
+                }
+                readReceipts[msg.id][userId] = new Date().toISOString();
+            }
+        });
+        
+        // Reset unread count
+        unreadCounts[role] = 0;
+        updateUnreadBadges();
+    }
+    
+    /**
+     * Update unread badge indicators
+     */
+    function updateUnreadBadges() {
+        ['Contractor', 'Employer', 'Agent'].forEach(role => {
+            const badge = document.getElementById(`unread-badge-${role.toLowerCase()}`);
+            if (badge) {
+                const count = unreadCounts[role];
+                if (count > 0) {
+                    badge.textContent = count > 99 ? '99+' : count;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+        });
+    }
+    
+    /**
+     * Add or remove reaction to a message
+     */
+    function toggleReaction(messageId, emoji) {
+        const userId = currentUser ? currentUser.id : 'anonymous';
+        const message = globalSharedState.negotiationChat.find(m => m.id === messageId);
+        
+        if (!message) return;
+        
+        // Initialize reactions if not exists
+        if (!message.reactions) {
+            message.reactions = {};
+        }
+        
+        if (!message.reactions[emoji]) {
+            message.reactions[emoji] = [];
+        }
+        
+        // Toggle reaction
+        const index = message.reactions[emoji].indexOf(userId);
+        if (index > -1) {
+            // Remove reaction
+            message.reactions[emoji].splice(index, 1);
+            if (message.reactions[emoji].length === 0) {
+                delete message.reactions[emoji];
+            }
+        } else {
+            // Add reaction
+            message.reactions[emoji].push(userId);
+        }
+        
+        saveToLocalStorage();
+        renderAllViews();
+    }
+    
+    /**
+     * Edit a message (within 5-minute window)
+     */
+    function editMessage(messageId, newText) {
+        const message = globalSharedState.negotiationChat.find(m => m.id === messageId);
+        if (!message) return;
+        
+        const userId = currentUser ? currentUser.id : message.senderRole;
+        if (message.senderId !== userId) {
+            alert('You can only edit your own messages');
+            return;
+        }
+        
+        // Check 5-minute window
+        const messageTime = new Date(message.fullTimestamp);
+        const now = new Date();
+        const diff = (now - messageTime) / 1000 / 60; // minutes
+        
+        if (diff > 5) {
+            alert('Messages can only be edited within 5 minutes of sending');
+            return;
+        }
+        
+        // Save edit history
+        if (!messageEditHistory[messageId]) {
+            messageEditHistory[messageId] = {
+                original: message.message,
+                edits: []
+            };
+        }
+        
+        messageEditHistory[messageId].edits.push({
+            text: newText,
+            editedAt: new Date().toISOString()
+        });
+        
+        message.message = newText;
+        message.formattedMessage = formatRichText(newText);
+        message.edited = true;
+        message.editedAt = new Date().toISOString();
+        
+        saveToLocalStorage();
+        renderAllViews();
+    }
+    
+    /**
+     * Scroll chat to bottom
+     */
+    function scrollChatToBottom(role) {
+        const chatContainer = document.getElementById(`chat-messages-${role.toLowerCase()}`);
+        if (chatContainer) {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
     }
 
     function renderChat(role) {
         const messages = globalSharedState.negotiationChat;
-        const isContractor = role === 'Contractor';
         const uniqueId = `chat-input-${role.toLowerCase()}`;
+        const currentUserId = currentUser ? currentUser.id : role;
+        
+        // Mark messages as read when viewing chat
+        setTimeout(() => markMessagesAsRead(role), 500);
+        
+        const availableReactions = ['👍', '❤️', '😊', '🎉', '✅', '❌'];
         
         return `
-            <div class="chat-container">
-                <div class="chat-header">
-                    <h3 class="font-bold text-lg">💬 Deal Negotiation Chat</h3>
-                    <p class="text-sm opacity-90">Discuss terms and finalize agreement</p>
+            <div class="chat-container" style="display: flex; flex-direction: column; height: 600px;">
+                <!-- Chat Header with Search -->
+                <div class="chat-header" style="padding: 1.5rem; border-bottom: 2px solid #e5e7eb; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 12px 12px 0 0;">
+                    <div class="flex items-center justify-between mb-2">
+                        <div>
+                            <h3 class="font-bold text-lg flex items-center gap-2">
+                                💬 Deal Negotiation Chat
+                                <span id="unread-badge-${role.toLowerCase()}" class="hidden bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">0</span>
+                            </h3>
+                            <p class="text-sm opacity-90">Modern chat with reactions and rich formatting</p>
+                        </div>
+                        <button onclick="toggleChatSearch('${role}')" class="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-all text-sm">
+                            🔍 Search
+                        </button>
+                    </div>
+                    <!-- Search Bar (hidden by default) -->
+                    <div id="chat-search-${role.toLowerCase()}" class="hidden mt-2">
+                        <input type="text" 
+                               id="chat-search-input-${role.toLowerCase()}"
+                               placeholder="Search messages..." 
+                               class="w-full px-3 py-2 rounded-lg text-gray-800"
+                               oninput="filterChatMessages('${role}', this.value)">
+                    </div>
                 </div>
-                <div class="chat-messages" id="chat-messages-${role.toLowerCase()}">
-                    ${messages.map(msg => `
-                        <div class="message ${msg.type}">
-                            <div class="message-avatar">${msg.type === 'contractor' ? '👤' : '🏢'}</div>
-                            <div class="message-bubble">
-                                <div class="font-semibold text-sm mb-1">${msg.sender}</div>
-                                <div>${msg.message}</div>
-                                <div class="message-time">${msg.timestamp}</div>
+                
+                <!-- Chat Messages -->
+                <div class="chat-messages" id="chat-messages-${role.toLowerCase()}" style="flex: 1; overflow-y: auto; padding: 1rem; background: #f9fafb;">
+                    ${messages.map((msg, idx) => {
+                        const isOwnMessage = msg.senderId === currentUserId;
+                        const canEdit = isOwnMessage && !msg.edited && isMessageEditableTime(msg.fullTimestamp);
+                        const readCount = msg.readBy ? msg.readBy.length : 0;
+                        const totalReactions = msg.reactions ? Object.values(msg.reactions).flat().length : 0;
+                        
+                        return `
+                        <div class="message ${msg.type} ${isOwnMessage ? 'own-message' : ''}" data-message-id="${msg.id}" style="display: flex; gap: 0.75rem; margin-bottom: 1rem; ${isOwnMessage ? 'flex-direction: row-reverse;' : ''}">
+                            <div class="message-avatar" style="width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: ${msg.type === 'contractor' ? '#3b82f6' : msg.type === 'employer' ? '#8b5cf6' : '#10b981'}; color: white; font-size: 1.25rem; flex-shrink: 0;">
+                                ${msg.type === 'contractor' ? '👤' : msg.type === 'employer' ? '🏢' : '👔'}
+                            </div>
+                            <div class="message-content" style="max-width: 70%; ${isOwnMessage ? 'align-items: flex-end;' : 'align-items: flex-start;'} display: flex; flex-direction: column;">
+                                <div class="message-bubble" style="background: ${isOwnMessage ? '#3b82f6' : '#fff'}; color: ${isOwnMessage ? 'white' : '#1f2937'}; padding: 0.75rem 1rem; border-radius: ${isOwnMessage ? '12px 12px 2px 12px' : '12px 12px 12px 2px'}; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: relative; word-wrap: break-word;">
+                                    <div class="font-semibold text-sm mb-1" style="${isOwnMessage ? 'color: rgba(255,255,255,0.9);' : 'color: #6b7280;'}">${msg.sender}</div>
+                                    <div style="line-height: 1.5;">${msg.formattedMessage || msg.message}</div>
+                                    ${msg.edited ? `<div class="text-xs opacity-70 mt-1 italic">(edited)</div>` : ''}
+                                    <div class="message-time" style="font-size: 0.7rem; margin-top: 0.25rem; opacity: 0.7;">
+                                        ${msg.timestamp}
+                                        ${readCount > 1 ? `<span class="ml-2">✓✓ Read by ${readCount - 1}</span>` : ''}
+                                    </div>
+                                </div>
+                                
+                                <!-- Reactions -->
+                                <div class="message-reactions" style="display: flex; gap: 0.25rem; margin-top: 0.25rem; flex-wrap: wrap;">
+                                    ${msg.reactions && Object.keys(msg.reactions).length > 0 ? Object.entries(msg.reactions).map(([emoji, users]) => `
+                                        <button onclick="toggleReaction('${msg.id}', '${emoji}')" 
+                                                class="reaction-btn" 
+                                                style="background: ${users.includes(currentUserId) ? '#dbeafe' : '#f3f4f6'}; border: 1px solid ${users.includes(currentUserId) ? '#3b82f6' : '#d1d5db'}; border-radius: 12px; padding: 0.125rem 0.5rem; font-size: 0.75rem; cursor: pointer; transition: all 0.2s;">
+                                            ${emoji} ${users.length}
+                                        </button>
+                                    `).join('') : ''}
+                                    <button onclick="showReactionPicker('${msg.id}')" 
+                                            class="add-reaction-btn" 
+                                            style="background: #f3f4f6; border: 1px dashed #d1d5db; border-radius: 12px; padding: 0.125rem 0.5rem; font-size: 0.75rem; cursor: pointer; transition: all 0.2s;"
+                                            title="Add reaction">
+                                        ➕
+                                    </button>
+                                </div>
+                                
+                                <!-- Message Actions -->
+                                ${canEdit ? `
+                                    <div class="message-actions" style="margin-top: 0.25rem;">
+                                        <button onclick="startEditMessage('${msg.id}')" class="text-xs text-blue-600 hover:text-blue-800 underline">
+                                            ✏️ Edit
+                                        </button>
+                                    </div>
+                                ` : ''}
                             </div>
                         </div>
-                    `).join('')}
+                    `;
+                    }).join('')}
                 </div>
-                <div class="chat-input">
+                
+                <!-- Typing Indicator -->
+                <div id="typing-indicator-${role.toLowerCase()}" class="hidden px-4 py-2 text-sm text-gray-600 italic"></div>
+                
+                <!-- Chat Input -->
+                <div class="chat-input" style="padding: 1rem; border-top: 2px solid #e5e7eb; background: white; border-radius: 0 0 12px 12px;">
+                    <!-- Formatting Help -->
+                    <div class="text-xs text-gray-500 mb-2 flex items-center gap-4">
+                        <span>💡 Formatting: **bold**, *italic*, \`code\`, \`\`\`code block\`\`\`</span>
+                    </div>
                     <div class="flex space-x-2">
-                        <input 
-                            type="text" 
+                        <textarea 
                             id="${uniqueId}" 
-                            placeholder="Type your message..." 
-                            class="flex-1 p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-white"
-                            onkeypress="if(event.key==='Enter') sendChatMessage('${role}')"
-                        >
+                            placeholder="Type your message... (use **bold**, *italic*, \`code\`)" 
+                            class="flex-1 p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-white resize-none"
+                            rows="2"
+                            oninput="showTypingIndicator('${role}')"
+                            onkeypress="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); sendChatMessage('${role}'); }"
+                        ></textarea>
                         <button 
                             onclick="sendChatMessage('${role}')"
-                            class="px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all transform hover:scale-105 font-semibold shadow-lg"
+                            class="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all transform hover:scale-105 font-semibold shadow-lg self-end"
                         >
                             Send
                         </button>
                     </div>
                 </div>
             </div>
+            
+            <!-- Hidden Reaction Picker Modal -->
+            <div id="reaction-picker-${role.toLowerCase()}" class="hidden fixed inset-0 bg-black bg-opacity-50 z-[3000] flex items-center justify-center" onclick="closeReactionPicker('${role}')">
+                <div class="bg-white rounded-lg p-4 shadow-xl" onclick="event.stopPropagation()">
+                    <h4 class="font-bold mb-3">Choose Reaction</h4>
+                    <div class="grid grid-cols-6 gap-2">
+                        ${availableReactions.map(emoji => `
+                            <button onclick="addReactionFromPicker('${emoji}', '${role}')" 
+                                    class="text-2xl hover:scale-125 transition-transform p-2 hover:bg-gray-100 rounded">
+                                ${emoji}
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
         `;
+    }
+    
+    // Helper functions for enhanced chat
+    function isMessageEditableTime(fullTimestamp) {
+        if (!fullTimestamp) return false;
+        const messageTime = new Date(fullTimestamp);
+        const now = new Date();
+        const diff = (now - messageTime) / 1000 / 60; // minutes
+        return diff <= 5;
+    }
+    
+    function toggleChatSearch(role) {
+        const searchDiv = document.getElementById(`chat-search-${role.toLowerCase()}`);
+        if (searchDiv) {
+            searchDiv.classList.toggle('hidden');
+            if (!searchDiv.classList.contains('hidden')) {
+                document.getElementById(`chat-search-input-${role.toLowerCase()}`).focus();
+            }
+        }
+    }
+    
+    function filterChatMessages(role, searchTerm) {
+        const messages = globalSharedState.negotiationChat;
+        const container = document.getElementById(`chat-messages-${role.toLowerCase()}`);
+        if (!container) return;
+        
+        const messageElements = container.querySelectorAll('.message');
+        messageElements.forEach((el, idx) => {
+            const msg = messages[idx];
+            if (msg && msg.message.toLowerCase().includes(searchTerm.toLowerCase())) {
+                el.style.display = 'flex';
+            } else {
+                el.style.display = 'none';
+            }
+        });
+    }
+    
+    let currentReactionMessageId = null;
+    
+    function showReactionPicker(messageId) {
+        currentReactionMessageId = messageId;
+        // Find which role's picker to show
+        ['contractor', 'employer', 'agent'].forEach(role => {
+            const picker = document.getElementById(`reaction-picker-${role}`);
+            if (picker) {
+                picker.classList.remove('hidden');
+            }
+        });
+    }
+    
+    function closeReactionPicker(role) {
+        const picker = document.getElementById(`reaction-picker-${role}`);
+        if (picker) {
+            picker.classList.add('hidden');
+        }
+        currentReactionMessageId = null;
+    }
+    
+    function addReactionFromPicker(emoji, role) {
+        if (currentReactionMessageId) {
+            toggleReaction(currentReactionMessageId, emoji);
+            closeReactionPicker(role);
+        }
+    }
+    
+    function startEditMessage(messageId) {
+        const message = globalSharedState.negotiationChat.find(m => m.id === messageId);
+        if (!message) return;
+        
+        const newText = prompt('Edit message:', message.message);
+        if (newText && newText.trim() && newText !== message.message) {
+            editMessage(messageId, newText.trim());
+        }
     }
 
     function sendChatMessage(role) {
