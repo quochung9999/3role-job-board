@@ -470,53 +470,6 @@
             border-radius: 50%;
             animation: pulse 2s infinite;
         }
-        
-        .workflow-controls {
-            display: flex;
-            gap: 0.5rem;
-            padding: 0.75rem;
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            border-bottom: 1px solid #e2e8f0;
-            position: relative;
-            z-index: 10;
-        }
-        .workflow-btn {
-            padding: 0.6rem 1.2rem;
-            border: 2px solid #e2e8f0;
-            background: white;
-            border-radius: 10px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-        .workflow-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, var(--color-contractor) 0%, var(--color-employer) 100%);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        .workflow-btn:hover { 
-            background: #f8fafc; 
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-        .workflow-btn.active { 
-            background: var(--color-contractor); 
-            color: white; 
-            border-color: var(--color-contractor);
-            box-shadow: 0 4px 12px rgba(0, 188, 212, 0.3);
-        }
-        .workflow-btn.active::before {
-            opacity: 0;
-        }
 
         /* CHAT STYLES */
         .chat-container {
@@ -717,6 +670,18 @@
         📊
     </button>
 
+    <!-- Reset Data Button (Floating) -->
+    <button 
+        id="reset-data-button" 
+        onclick="resetData()" 
+        style="position: fixed; top: 10px; right: 70px; z-index: 1000; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 24px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: all 0.3s ease; display: flex; align-items: center; justify-content: center;"
+        onmouseover="this.style.transform='scale(1.1)'; this.style.boxShadow='0 6px 20px rgba(0,0,0,0.4)';"
+        onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.3)';"
+        title="Reset All Data (Keeps Users)"
+    >
+        🔄
+    </button>
+
     <!-- Global Workflow Progress Tracker -->
     <div id="progress-tracker-container" class="progress-tracker" style="position: fixed; top: 0; left: 0; right: 0; z-index: 999; margin: 0; border-radius: 0; border-bottom: 1px solid #e5e7eb; transition: transform 0.3s ease, opacity 0.3s ease;">
         <div class="progress-info">
@@ -791,13 +756,6 @@
             </button>
         </div>
         
-        <div class="workflow-controls">
-            <button class="workflow-btn active" onclick="simulateWorkflowStep(1)">Step 1</button>
-            <button class="workflow-btn" onclick="simulateWorkflowStep(2)">Step 2</button>
-            <button class="workflow-btn" onclick="simulateWorkflowStep(3)">Step 3</button>
-            <button class="workflow-btn" onclick="simulateWorkflowStep(4)">Step 4</button>
-            <button class="workflow-btn" onclick="simulateWorkflowStep(5)">Step 5</button>
-        </div>
         <div id="contractor-content" class="scrollable-content"></div>
         <div id="contractor-nav" class="flex border-t border-gray-200 bg-white"></div>
     </div>
@@ -821,13 +779,6 @@
             <!-- Will be populated when employer logs in -->
         </div>
         
-        <div class="workflow-controls">
-            <button class="workflow-btn" onclick="simulateWorkflowStep(1)">Step 1</button>
-            <button class="workflow-btn" onclick="simulateWorkflowStep(2)">Step 2</button>
-            <button class="workflow-btn" onclick="simulateWorkflowStep(3)">Step 3</button>
-            <button class="workflow-btn" onclick="simulateWorkflowStep(4)">Step 4</button>
-            <button class="workflow-btn" onclick="simulateWorkflowStep(5)">Step 5</button>
-        </div>
         <div id="employer-content" class="scrollable-content"></div>
         <div id="employer-nav" class="flex border-t border-gray-200 bg-white"></div>
     </div>
@@ -846,13 +797,6 @@
             </button>
         </div>
         
-        <div class="workflow-controls">
-            <button class="workflow-btn" onclick="simulateWorkflowStep(1)">Step 1</button>
-            <button class="workflow-btn" onclick="simulateWorkflowStep(2)">Step 2</button>
-            <button class="workflow-btn" onclick="simulateWorkflowStep(3)">Step 3</button>
-            <button class="workflow-btn" onclick="simulateWorkflowStep(4)">Step 4</button>
-            <button class="workflow-btn" onclick="simulateWorkflowStep(5)">Step 5</button>
-        </div>
         <div id="agent-content" class="scrollable-content"></div>
         <div id="agent-nav" class="flex border-t border-gray-200 bg-white"></div>
     </div>
@@ -2054,25 +1998,6 @@
             toggleProgressTracker();
         }
     }
-
-    function simulateWorkflowStep(step) {
-        const statuses = [
-            'Awaiting Initial Demand',
-            'Demand Submitted - Awaiting Employer Review',
-            'Chat Negotiation',
-            'Ready for Agent Review',
-            'Deal Manager Processed - Ready for Escrow'
-        ];
-        
-        if (step >= 1 && step <= statuses.length) {
-            globalSharedState.deal.status = statuses[step - 1];
-            addActivity('Demo', `Simulated workflow step ${step}: ${statuses[step - 1]}`, 'system');
-            renderAllViews();
-        }
-    }
-
-    // --- Role Switching ---
-
 
     // --- Chat Functions (FIXED) ---
     async function sendMessage(role, message) {
@@ -3407,6 +3332,61 @@
 
     function hideCancelModal() {
         document.getElementById('cancel-modal')?.classList.add('hidden');
+    }
+
+    // --- Reset Data Function (Keeps Dummy Users) ---
+    async function resetData() {
+        if (!confirm('⚠️ Reset all deal data? This will clear all deals, messages, and activities but keep your dummy users.')) {
+            return;
+        }
+        
+        try {
+            // Reset global state to initial
+            globalSharedState = {
+                deal: {
+                    id: null,
+                    status: 'Awaiting Initial Demand',
+                    rate: null,
+                    workHours: null,
+                    workDays: null,
+                    option: null,
+                    agentNotes: '',
+                    riskLevel: 'low',
+                    priority: 'normal',
+                    estimatedValue: 0,
+                    complianceChecked: false,
+                    backgroundCheckStatus: 'pending'
+                },
+                negotiationChat: [],
+                activities: [],
+                agentActions: []
+            };
+            
+            // Clear current deal ID
+            currentDealId = null;
+            
+            // Save to localStorage
+            saveToLocalStorage();
+            
+            // Try to delete from database (if exists)
+            if (currentDealId) {
+                await deleteDealFromDB(currentDealId);
+            }
+            
+            // Log activity
+            await addActivity('System', '🔄 Data reset - ready for new deals', 'system');
+            
+            // Re-render all views
+            renderAllViews();
+            updateProgressTracker();
+            
+            alert('✅ Data reset successfully! Dummy users are still available.');
+            
+        } catch (error) {
+            console.error('Error resetting data:', error);
+            await logError(error, 'reset_data_error', { operation: 'resetData' });
+            alert('❌ Error resetting data. Check console for details.');
+        }
     }
 
 
