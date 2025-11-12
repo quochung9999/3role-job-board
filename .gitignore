@@ -3,6 +3,16 @@ test-screenshots/
 test-results/
 playwright-report/
 test-results.json
+blob-report/
+
+# Coverage and build outputs
+coverage/
+dist/
+
+# Environment files
+.env
+.env.local
+.env.*.local
 
 # Node modules
 node_modules/
