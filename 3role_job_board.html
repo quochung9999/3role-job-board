@@ -928,6 +928,131 @@
     
     console.log('✅ Supabase client initialized:', SUPABASE_URL);
 
+    // --- Error Logging System ---
+    /**
+     * Log errors to Supabase for monitoring and debugging
+     * @param {Error|string} error - Error object or error message
+     * @param {string} errorType - Type of error (e.g., 'database', 'network', 'validation')
+     * @param {Object} additionalContext - Additional context information
+     */
+    async function logError(error, errorType = 'unknown', additionalContext = {}) {
+        try {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const stackTrace = error instanceof Error ? error.stack : null;
+            
+            const errorLog = {
+                error_type: errorType,
+                error_message: errorMessage,
+                stack_trace: stackTrace,
+                user_id: currentUser?.id || null,
+                user_role: currentUser?.role || null,
+                context: {
+                    ...additionalContext,
+                    timestamp: new Date().toISOString(),
+                    deal_id: globalSharedState?.deal?.id || null,
+                    page_state: {
+                        hasActiveChat: !!document.getElementById('chat-container'),
+                        currentView: document.body.className
+                    }
+                },
+                url: window.location.href,
+                user_agent: navigator.userAgent
+            };
+
+            // Log to Supabase
+            const { data, error: dbError } = await supabase
+                .from('error_logs')
+                .insert([errorLog])
+                .select();
+
+            if (dbError) {
+                console.error('❌ Failed to log error to database:', dbError);
+                // Fallback: log to localStorage
+                const localErrors = JSON.parse(localStorage.getItem('error_logs_fallback') || '[]');
+                localErrors.push({...errorLog, logged_at: new Date().toISOString()});
+                // Keep only last 50 errors
+                if (localErrors.length > 50) localErrors.shift();
+                localStorage.setItem('error_logs_fallback', JSON.stringify(localErrors));
+            } else {
+                console.log('✅ Error logged to database:', data);
+            }
+
+            // Also log to console for development
+            console.error(`[${errorType}] ${errorMessage}`, {
+                error,
+                context: additionalContext,
+                stackTrace
+            });
+
+        } catch (loggingError) {
+            // If error logging itself fails, at least log to console
+            console.error('❌ Critical: Error logging failed:', loggingError);
+            console.error('Original error:', error);
+        }
+    }
+
+    /**
+     * Get recent error logs from Supabase
+     * @param {number} limit - Number of recent errors to retrieve
+     * @returns {Promise<Array>} Array of error logs
+     */
+    async function getRecentErrors(limit = 50) {
+        try {
+            const { data, error } = await supabase
+                .from('error_logs')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(limit);
+
+            if (error) {
+                console.error('Failed to fetch error logs:', error);
+                return [];
+            }
+
+            return data;
+        } catch (err) {
+            console.error('Error fetching error logs:', err);
+            return [];
+        }
+    }
+
+    /**
+     * Get error summary (grouped by type)
+     * @returns {Promise<Array>} Array of error summaries
+     */
+    async function getErrorSummary() {
+        try {
+            const { data, error } = await supabase
+                .from('error_summary')
+                .select('*');
+
+            if (error) {
+                console.error('Failed to fetch error summary:', error);
+                return [];
+            }
+
+            return data;
+        } catch (err) {
+            console.error('Error fetching error summary:', err);
+            return [];
+        }
+    }
+
+    // Global error handlers
+    window.addEventListener('error', (event) => {
+        logError(event.error || event.message, 'uncaught_exception', {
+            filename: event.filename,
+            lineno: event.lineno,
+            colno: event.colno
+        });
+    });
+
+    window.addEventListener('unhandledrejection', (event) => {
+        logError(event.reason, 'unhandled_promise_rejection', {
+            promise: event.promise?.toString()
+        });
+    });
+
     // --- Dummy Users for PoC (Testing Only) ---
     const DUMMY_USERS = {
         // 4 Job Seekers (Contractors)
@@ -1043,6 +1168,21 @@
             return data;
         } catch (error) {
             console.error('❌ Error creating deal:', error);
+            
+            // Log error to Supabase error_logs table
+            await logError(error, 'database_create_deal', {
+                operation: 'createDealInDB',
+                dealData: {
+                    rate: dealData.rate,
+                    workHours: dealData.workHours,
+                    workDays: dealData.workDays,
+                    option: dealData.option,
+                    status: dealData.status
+                },
+                currentUserId,
+                supabaseError: error.message
+            });
+            
             alert('Failed to create deal in database. Using local storage as fallback.');
             return null;
         }
@@ -1083,6 +1223,17 @@
             return data;
         } catch (error) {
             console.error('❌ Error updating deal:', error);
+            
+            // Log error to database
+            await logError(error, 'database_update_deal', {
+                operation: 'updateDealInDB',
+                currentDealId,
+                dealData: {
+                    rate: dealData.rate,
+                    status: dealData.status
+                }
+            });
+            
             alert('Failed to update deal in database. Changes saved locally only.');
             return null;
         }
@@ -1172,6 +1323,15 @@
             return data;
         } catch (error) {
             console.error('❌ Error saving message:', error);
+            
+            // Log error to database
+            await logError(error, 'database_save_message', {
+                operation: 'saveMessageToDB',
+                currentDealId,
+                senderRole,
+                messageLength: message?.length
+            });
+            
             return null;
         }
     }
@@ -3233,7 +3393,30 @@
         
         console.log('🎯 PoC Ready! Select users from dropdown to test each role.');
         console.log(`📊 Available: ${getUsersByRole('contractor').length} contractors, ${getUsersByRole('employer').length} employers`);
+        console.log('🐛 Debug Commands:');
+        console.log('  - viewErrors()      : View recent error logs');
+        console.log('  - viewErrorSummary(): View error summary by type');
     };
+
+    // Make error viewing functions available in console
+    window.viewErrors = async () => {
+        const errors = await getRecentErrors(20);
+        console.table(errors.map(e => ({
+            time: new Date(e.created_at).toLocaleString(),
+            type: e.error_type,
+            message: e.error_message.substring(0, 100),
+            user: e.user_role || 'unknown',
+            resolved: e.resolved
+        })));
+        return errors;
+    };
+
+    window.viewErrorSummary = async () => {
+        const summary = await getErrorSummary();
+        console.table(summary);
+        return summary;
+    };
+
 </script>
 
 </body>
